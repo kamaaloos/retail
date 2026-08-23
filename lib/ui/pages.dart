@@ -10,8 +10,11 @@ import '../models/product.dart';
 import '../models/sale.dart';
 import '../models/staff.dart';
 import '../providers/retail_store.dart';
+import 'report_charts.dart';
 import 'theme.dart';
 import 'widgets.dart';
+
+AppStrings _t(BuildContext context) => AppStrings.of(context.read<RetailStore>().language);
 
 String _fmtQty(double q, {bool decimal = false}) {
   if (decimal) return q.toStringAsFixed(q == q.roundToDouble() ? 0 : 1);
@@ -44,9 +47,10 @@ Future<void> _snack(BuildContext context, String message, {bool error = false}) 
 Future<double?> _promptAmount(
   BuildContext context, {
   required String title,
-  String label = 'Amount',
+  String? label,
   double? initial,
 }) async {
+  final t = _t(context);
   final ctrl = TextEditingController(text: initial != null ? initial.toStringAsFixed(2) : '');
   final result = await showDialog<double>(
     context: context,
@@ -56,17 +60,17 @@ Future<double?> _promptAmount(
         controller: ctrl,
         autofocus: true,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: InputDecoration(labelText: label),
+        decoration: InputDecoration(labelText: label ?? t.amount),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t.cancel)),
         FilledButton(
           onPressed: () {
             final v = double.tryParse(ctrl.text.trim());
             if (v == null || v < 0) return;
             Navigator.pop(ctx, v);
           },
-          child: const Text('OK'),
+          child: Text(t.ok),
         ),
       ],
     ),
@@ -78,9 +82,10 @@ Future<double?> _promptAmount(
 Future<String?> _promptText(
   BuildContext context, {
   required String title,
-  String label = 'Note',
+  String? label,
   bool required = false,
 }) async {
+  final t = _t(context);
   final ctrl = TextEditingController();
   final result = await showDialog<String>(
     context: context,
@@ -89,17 +94,17 @@ Future<String?> _promptText(
       content: TextField(
         controller: ctrl,
         autofocus: true,
-        decoration: InputDecoration(labelText: label),
+        decoration: InputDecoration(labelText: label ?? t.note),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t.cancel)),
         FilledButton(
           onPressed: () {
-            final t = ctrl.text.trim();
-            if (required && t.isEmpty) return;
-            Navigator.pop(ctx, t);
+            final text = ctrl.text.trim();
+            if (required && text.isEmpty) return;
+            Navigator.pop(ctx, text);
           },
-          child: const Text('OK'),
+          child: Text(t.ok),
         ),
       ],
     ),
@@ -346,26 +351,27 @@ class _PosPageState extends State<PosPage> {
   }
 
   Future<void> _setQtyDialog(Product product, double current) async {
+    final t = _t(context);
     final ctrl = TextEditingController(text: current.toString());
     final result = await showDialog<double>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Quantity · ${product.unit}'),
+        title: Text(t.quantityTitle.replaceAll('{unit}', product.unit)),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(labelText: 'Qty (${product.unit})'),
+          decoration: InputDecoration(labelText: t.qtyLabel.replaceAll('{unit}', product.unit)),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t.cancel)),
           FilledButton(
             onPressed: () {
               final v = double.tryParse(ctrl.text.trim());
               if (v == null) return;
               Navigator.pop(ctx, v);
             },
-            child: const Text('Set'),
+            child: Text(t.set),
           ),
         ],
       ),
@@ -377,14 +383,15 @@ class _PosPageState extends State<PosPage> {
 
   Future<void> _charge() async {
     final store = context.read<RetailStore>();
+    final t = AppStrings.of(store.language);
     if (store.cart.isEmpty) {
-      await _snack(context, 'Cart is empty', error: true);
+      await _snack(context, t.cartEmpty, error: true);
       return;
     }
     final method = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Charge'),
+        title: Text(t.chargeTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -395,20 +402,25 @@ class _PosPageState extends State<PosPage> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, 'cash'),
-              child: const Text('Cash'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () => Navigator.pop(ctx, 'card'),
-              child: const Text('Card'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () => Navigator.pop(ctx, 'mobile'),
-              child: const Text('Mobile'),
-            ),
+            if (store.enabledPaymentMethods.isEmpty)
+              Text(t.noPaymentMethodsYet, style: TextStyle(color: AppColors.muted))
+            else
+              ...store.enabledPaymentMethods.asMap().entries.map((entry) {
+                final method = entry.value;
+                final isFirst = entry.key == 0;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: isFirst
+                      ? FilledButton(
+                          onPressed: () => Navigator.pop(ctx, method.code),
+                          child: Text(method.label),
+                        )
+                      : OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx, method.code),
+                          child: Text(method.label),
+                        ),
+                );
+              }),
           ],
         ),
       ),
@@ -418,7 +430,7 @@ class _PosPageState extends State<PosPage> {
       final sale = await store.checkout(paymentMethod: method);
       if (!mounted) return;
       await _reloadProducts();
-      await _snack(context, 'Sale ${sale.receiptNumber} completed');
+      await _snack(context, t.saleCompleted.replaceAll('{receipt}', sale.receiptNumber));
     } catch (e) {
       if (!mounted) return;
       await _snack(context, e.toString(), error: true);
@@ -448,7 +460,7 @@ class _PosPageState extends State<PosPage> {
                   onChanged: (_) => _reloadProducts(),
                   onSubmitted: (_) => _onSearchSubmit(),
                   decoration: InputDecoration(
-                    hintText: 'Search name, SKU or barcode…',
+                    hintText: t.searchHint,
                     prefixIcon: Icon(Icons.search, color: AppColors.muted),
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.qr_code_scanner, color: AppColors.accent),
@@ -463,7 +475,7 @@ class _PosPageState extends State<PosPage> {
                     scrollDirection: Axis.horizontal,
                     children: [
                       SoftChip(
-                        label: 'All',
+                        label: t.allCategories,
                         selected: _categoryId == null,
                         onTap: () {
                           setState(() => _categoryId = null);
@@ -494,7 +506,7 @@ class _PosPageState extends State<PosPage> {
                       ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
                       : _products.isEmpty
                           ? Center(
-                              child: Text('No products found', style: TextStyle(color: AppColors.muted)),
+                              child: Text(t.noProductsFound, style: TextStyle(color: AppColors.muted)),
                             )
                           : GridView.builder(
                               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -612,24 +624,24 @@ class _PosPageState extends State<PosPage> {
                 children: [
                   Row(
                     children: [
-                      Text('Cart', style: Theme.of(context).textTheme.titleLarge),
+                      Text(t.cart, style: Theme.of(context).textTheme.titleLarge),
                       const Spacer(),
                       if (store.cart.isNotEmpty)
                         TextButton(
                           onPressed: store.clearCart,
-                          child: const Text('Clear'),
+                          child: Text(t.clearCart),
                         ),
                     ],
                   ),
                   Text(
-                    '${store.cartCount} items',
+                    t.cartItemsCount.replaceAll('{count}', '${store.cartCount}'),
                     style: TextStyle(color: AppColors.muted, fontSize: 12),
                   ),
                   const SizedBox(height: 10),
                   Expanded(
                     child: store.cart.isEmpty
                         ? Center(
-                            child: Text('Tap products to add', style: TextStyle(color: AppColors.muted)),
+                            child: Text(t.tapProductsToAdd, style: TextStyle(color: AppColors.muted)),
                           )
                         : ListView.separated(
                             itemCount: store.cart.length,
@@ -645,6 +657,13 @@ class _PosPageState extends State<PosPage> {
                                     p.name,
                                     style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w600),
                                   ),
+                                  if (item.discount > 0) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${t.discountOff}: -${Money.format(item.discount, symbol: sym)}',
+                                      style: TextStyle(color: AppColors.green, fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
                                   const SizedBox(height: 2),
                                   Text(
                                     Money.format(item.lineTotal, symbol: sym),
@@ -687,16 +706,18 @@ class _PosPageState extends State<PosPage> {
                           ),
                   ),
                   Divider(color: AppColors.line),
-                  _cartLine('Subtotal', Money.format(store.cartSubtotal, symbol: sym)),
-                  _cartLine('Tax', Money.format(store.cartTax, symbol: sym)),
+                  _cartLine(t.subtotal, Money.format(store.cartSubtotal + store.cartDiscountTotal, symbol: sym)),
+                  if (store.cartDiscountTotal > 0)
+                    _cartLine(t.cartDiscount, '-${Money.format(store.cartDiscountTotal, symbol: sym)}'),
+                  _cartLine(t.tax, Money.format(store.cartTax, symbol: sym)),
                   const SizedBox(height: 6),
-                  _cartLine('Total', Money.format(store.cartTotal, symbol: sym), bold: true),
+                  _cartLine(t.total, Money.format(store.cartTotal, symbol: sym), bold: true),
                   const SizedBox(height: 14),
                   SizedBox(
                     height: 48,
                     child: FilledButton(
                       onPressed: store.cart.isEmpty ? null : _charge,
-                      child: Text('Charge ${Money.format(store.cartTotal, symbol: sym)}'),
+                      child: Text(t.chargeBtn.replaceAll('{amount}', Money.format(store.cartTotal, symbol: sym))),
                     ),
                   ),
                 ],
@@ -769,6 +790,7 @@ class ProductsPage extends StatelessWidget {
 
   Future<void> _openEditor(BuildContext context, {Product? existing}) async {
     final store = context.read<RetailStore>();
+    final t = _t(context);
     final result = await showDialog<Product>(
       context: context,
       builder: (_) => _ProductEditorDialog(existing: existing, categories: store.categories),
@@ -777,10 +799,10 @@ class ProductsPage extends StatelessWidget {
     try {
       if (existing == null) {
         await store.addProduct(result);
-        if (context.mounted) await _snack(context, 'Product added');
+        if (context.mounted) await _snack(context, t.productAdded);
       } else {
         await store.updateProduct(result);
-        if (context.mounted) await _snack(context, 'Product updated');
+        if (context.mounted) await _snack(context, t.productUpdated);
       }
     } catch (e) {
       if (context.mounted) await _snack(context, e.toString(), error: true);
@@ -788,24 +810,25 @@ class ProductsPage extends StatelessWidget {
   }
 
   Future<void> _delete(BuildContext context, Product p) async {
+    final t = _t(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Deactivate product'),
-        content: Text('Remove "${p.name}" from the catalogue?'),
+        title: Text(t.deactivateProduct),
+        content: Text(t.deactivateProductConfirm.replaceAll('{name}', p.name)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t.cancel)),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: AppColors.red),
-            child: const Text('Deactivate'),
+            child: Text(t.deactivateBtn),
           ),
         ],
       ),
     );
     if (ok != true || !context.mounted) return;
     await context.read<RetailStore>().deactivateProduct(p.id!);
-    if (context.mounted) await _snack(context, 'Product deactivated');
+    if (context.mounted) await _snack(context, t.productDeactivated);
   }
 
   @override
@@ -840,14 +863,14 @@ class ProductsPage extends StatelessWidget {
               : SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('Name')),
-                      DataColumn(label: Text('Price')),
-                      DataColumn(label: Text('Cost')),
-                      DataColumn(label: Text('Stock')),
-                      DataColumn(label: Text('SKU / Barcode')),
-                      DataColumn(label: Text('Category')),
-                      DataColumn(label: Text('')),
+                    columns: [
+                      DataColumn(label: Text(t.colName)),
+                      DataColumn(label: Text(t.colPrice)),
+                      DataColumn(label: Text(t.colCost)),
+                      DataColumn(label: Text(t.colStock)),
+                      DataColumn(label: Text(t.colSkuBarcode)),
+                      DataColumn(label: Text(t.colCategory)),
+                      const DataColumn(label: Text('')),
                     ],
                     rows: products.map((p) {
                       return DataRow(
@@ -1011,7 +1034,10 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save image: $e'), backgroundColor: AppColors.red),
+        SnackBar(
+          content: Text(_t(context).couldNotSaveImage.replaceAll('{error}', '$e')),
+          backgroundColor: AppColors.red,
+        ),
       );
       setState(() => _saving = false);
     }
@@ -1019,9 +1045,10 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final t = _t(context);
     final previewPath = _clearImage ? null : _imagePath;
     return AlertDialog(
-      title: Text(widget.existing == null ? 'New Product' : 'Edit Product'),
+      title: Text(widget.existing == null ? t.newProduct : t.editProduct),
       content: SizedBox(
         width: 460,
         child: SingleChildScrollView(
@@ -1041,7 +1068,7 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Product image', style: Theme.of(context).textTheme.titleMedium),
+                        Text(t.productImage, style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
@@ -1050,7 +1077,7 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
                             OutlinedButton.icon(
                               onPressed: _saving ? null : _pickImage,
                               icon: const Icon(Icons.upload, size: 16),
-                              label: const Text('Upload'),
+                              label: Text(t.upload),
                             ),
                             if (previewPath != null)
                               TextButton(
@@ -1061,7 +1088,7 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
                                           _pickedSource = null;
                                           _imagePath = null;
                                         }),
-                                child: const Text('Remove'),
+                                child: Text(t.remove),
                               ),
                           ],
                         ),
@@ -1071,14 +1098,14 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
                 ],
               ),
               const SizedBox(height: 14),
-              TextField(controller: _name, decoration: const InputDecoration(labelText: 'Name')),
+              TextField(controller: _name, decoration: InputDecoration(labelText: t.colName)),
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Expanded(child: TextField(controller: _sku, decoration: const InputDecoration(labelText: 'SKU'))),
+                  Expanded(child: TextField(controller: _sku, decoration: InputDecoration(labelText: t.sku))),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: TextField(controller: _barcode, decoration: const InputDecoration(labelText: 'Barcode')),
+                    child: TextField(controller: _barcode, decoration: InputDecoration(labelText: t.barcode)),
                   ),
                 ],
               ),
@@ -1088,7 +1115,7 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       value: _unit,
-                      decoration: const InputDecoration(labelText: 'Unit'),
+                      decoration: InputDecoration(labelText: t.unitLabel),
                       items: productUnits
                           .map((u) => DropdownMenuItem(value: u, child: Text(u)))
                           .toList(),
@@ -1099,9 +1126,9 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
                   Expanded(
                     child: DropdownButtonFormField<int?>(
                       value: _categoryId,
-                      decoration: const InputDecoration(labelText: 'Category'),
+                      decoration: InputDecoration(labelText: t.colCategory),
                       items: [
-                        const DropdownMenuItem<int?>(value: null, child: Text('None')),
+                        DropdownMenuItem<int?>(value: null, child: Text(t.none)),
                         ...widget.categories.map(
                           (c) => DropdownMenuItem<int?>(value: c.id, child: Text(c.name)),
                         ),
@@ -1118,7 +1145,7 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
                     child: TextField(
                       controller: _price,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Selling price'),
+                      decoration: InputDecoration(labelText: t.sellingPrice),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1126,7 +1153,7 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
                     child: TextField(
                       controller: _cost,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Cost'),
+                      decoration: InputDecoration(labelText: t.costLabel),
                     ),
                   ),
                 ],
@@ -1138,7 +1165,7 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
                     child: TextField(
                       controller: _tax,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Tax %'),
+                      decoration: InputDecoration(labelText: t.taxPercent),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1146,7 +1173,7 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
                     child: TextField(
                       controller: _reorder,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Reorder level'),
+                      decoration: InputDecoration(labelText: t.reorderLevel),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1154,7 +1181,7 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
                     child: TextField(
                       controller: _stock,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Stock'),
+                      decoration: InputDecoration(labelText: t.colStock),
                       enabled: widget.existing == null,
                     ),
                   ),
@@ -1163,7 +1190,7 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
               const SizedBox(height: 14),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Color', style: Theme.of(context).textTheme.titleMedium),
+                child: Text(t.color, style: Theme.of(context).textTheme.titleMedium),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -1194,12 +1221,12 @@ class _ProductEditorDialogState extends State<_ProductEditorDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: _saving ? null : () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(onPressed: _saving ? null : () => Navigator.pop(context), child: Text(t.cancel)),
         FilledButton(
           onPressed: _saving ? null : _save,
           child: _saving
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Save'),
+              : Text(t.save),
         ),
       ],
     );
@@ -1214,17 +1241,18 @@ class CategoriesPage extends StatelessWidget {
   const CategoriesPage({super.key});
 
   Future<void> _edit(BuildContext context, {Category? existing}) async {
+    final t = _t(context);
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     var color = existing?.color ?? productColorPalette.first;
     final result = await showDialog<(String, String)>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          title: Text(existing == null ? 'New Category' : 'Edit Category'),
+          title: Text(existing == null ? t.newCategory : t.editCategory),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
+              TextField(controller: nameCtrl, decoration: InputDecoration(labelText: t.colName)),
               const SizedBox(height: 14),
               Wrap(
                 spacing: 8,
@@ -1248,14 +1276,14 @@ class CategoriesPage extends StatelessWidget {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(t.cancel)),
             FilledButton(
               onPressed: () {
                 final n = nameCtrl.text.trim();
                 if (n.isEmpty) return;
                 Navigator.pop(ctx, (n, color));
               },
-              child: const Text('Save'),
+              child: Text(t.save),
             ),
           ],
         ),
@@ -1272,17 +1300,18 @@ class CategoriesPage extends StatelessWidget {
   }
 
   Future<void> _delete(BuildContext context, Category c) async {
+    final t = _t(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete category'),
-        content: Text('Delete "${c.name}"?'),
+        title: Text(t.deleteCategory),
+        content: Text(t.deleteCategoryConfirm.replaceAll('{name}', c.name)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t.cancel)),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: AppColors.red),
-            child: const Text('Delete'),
+            child: Text(t.delete),
           ),
         ],
       ),
@@ -1344,7 +1373,7 @@ class CategoriesPage extends StatelessWidget {
                         children: [
                           Text(c.name, style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w700)),
                           Text(
-                            '${c.productCount} products',
+                            t.categoryProductCount.replaceAll('{count}', '${c.productCount}'),
                             style: TextStyle(color: AppColors.muted, fontSize: 12),
                           ),
                         ],
@@ -1413,6 +1442,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
   Future<void> _showDetail(Sale sale) async {
     if (sale.id == null) return;
     final store = context.read<RetailStore>();
+    final t = _t(context);
     final detail = await store.saleDetail(sale.id!);
     if (detail == null || !mounted) return;
     final sym = store.currencySymbol;
@@ -1428,9 +1458,9 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(_fmtDate(detail.sale.soldAt, AppStrings.of(context.read<RetailStore>().language)), style: TextStyle(color: AppColors.muted)),
+                Text(_fmtDate(detail.sale.soldAt, t), style: TextStyle(color: AppColors.muted)),
                 Text(
-                  detail.sale.employeeName ?? AppStrings.of(context.read<RetailStore>().language).staffFallback,
+                  detail.sale.employeeName ?? t.staffFallback,
                   style: TextStyle(color: AppColors.muted, fontSize: 12),
                 ),
                 const SizedBox(height: 12),
@@ -1453,7 +1483,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                 Divider(color: AppColors.line),
                 Row(
                   children: [
-                    Text('Total', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.text)),
+                    Text(t.total, style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.text)),
                     const Spacer(),
                     Text(
                       Money.format(detail.sale.total, symbol: sym),
@@ -1465,7 +1495,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                   const SizedBox(height: 8),
                   ...detail.payments.map(
                     (p) => Text(
-                      '${p.method}: ${Money.format(p.amount, symbol: sym)}',
+                      '${t.paymentMethod(p.method)}: ${Money.format(p.amount, symbol: sym)}',
                       style: TextStyle(color: AppColors.muted, fontSize: 12),
                     ),
                   ),
@@ -1481,16 +1511,17 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                 Navigator.pop(ctx);
                 await _refund(detail);
               },
-              child: const Text('Refund', style: TextStyle(color: AppColors.red)),
+              child: Text(t.refund, style: const TextStyle(color: AppColors.red)),
             ),
-          FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          FilledButton(onPressed: () => Navigator.pop(ctx), child: Text(t.closeBtn)),
         ],
       ),
     );
   }
 
   Future<void> _refund(SaleDetail detail) async {
-    final reason = await _promptText(context, title: 'Refund reason', label: 'Reason', required: true);
+    final t = _t(context);
+    final reason = await _promptText(context, title: t.refundReason, label: t.reason, required: true);
     if (reason == null || !mounted) return;
     final quantities = <int, double>{
       for (final item in detail.items) item.productId: item.quantity,
@@ -1501,7 +1532,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
             quantities: quantities,
             reason: reason,
           );
-      if (mounted) await _snack(context, 'Sale refunded');
+      if (mounted) await _snack(context, t.saleRefunded);
     } catch (e) {
       if (mounted) await _snack(context, e.toString(), error: true);
     }
@@ -1519,36 +1550,54 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
         PageTitle(title: t.salesHistory, subtitle: t.salesHistorySubtitle),
         const SizedBox(height: 16),
         ShopPanel(
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              OutlinedButton.icon(
-                onPressed: _pickFrom,
-                icon: const Icon(Icons.calendar_today, size: 16),
-                label: Text(_from == null ? 'From' : _fmtShortDate(_from!, t)),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _pickFrom,
+                    icon: const Icon(Icons.calendar_today, size: 16),
+                    label: Text(_from == null ? t.filterFrom : _fmtShortDate(_from!, t)),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _pickTo,
+                    icon: const Icon(Icons.event, size: 16),
+                    label: Text(_to == null ? t.filterTo : _fmtShortDate(_to!, t)),
+                  ),
+                ],
               ),
-              OutlinedButton.icon(
-                onPressed: _pickTo,
-                icon: const Icon(Icons.event, size: 16),
-                label: Text(_to == null ? 'To' : _fmtShortDate(_to!, t)),
-              ),
-              SizedBox(
-                width: 200,
-                child: DropdownButtonFormField<int?>(
-                  value: _employeeId,
-                  decoration: const InputDecoration(labelText: 'Employee'),
-                  items: [
-                    const DropdownMenuItem<int?>(value: null, child: Text('All staff')),
-                    ...store.employees.map(
-                      (e) => DropdownMenuItem<int?>(value: e.id, child: Text(e.name)),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<int?>(
+                      value: _employeeId,
+                      isExpanded: true,
+                      decoration: InputDecoration(labelText: t.employee),
+                      items: [
+                        DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text(t.allStaff, overflow: TextOverflow.ellipsis),
+                        ),
+                        ...store.employees.map(
+                          (e) => DropdownMenuItem<int?>(
+                            value: e.id,
+                            child: Text(e.name, overflow: TextOverflow.ellipsis),
+                          ),
+                        ),
+                      ],
+                      onChanged: (v) => setState(() => _employeeId = v),
                     ),
-                  ],
-                  onChanged: (v) => setState(() => _employeeId = v),
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton(onPressed: _apply, child: Text(t.apply)),
+                ],
               ),
-              FilledButton(onPressed: _apply, child: const Text('Apply')),
             ],
           ),
         ),
@@ -1558,7 +1607,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
           child: store.filteredSales.isEmpty
               ? Padding(
                   padding: const EdgeInsets.all(32),
-                  child: Center(child: Text('No sales in this period', style: TextStyle(color: AppColors.muted))),
+                  child: Center(child: Text(t.noSalesInPeriod, style: TextStyle(color: AppColors.muted))),
                 )
               : Column(
                   children: store.filteredSales.map((sale) {
@@ -1615,35 +1664,38 @@ class InventoryPage extends StatelessWidget {
   const InventoryPage({super.key});
 
   Future<void> _adjust(BuildContext context, Product p) async {
+    final t = _t(context);
     final deltaCtrl = TextEditingController();
     final reasonCtrl = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Adjust stock · ${p.name}'),
+        title: Text(t.adjustStockTitle.replaceAll('{name}', p.name)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Current: ${_fmtQty(p.stockOnHand, decimal: p.isDecimalUnit)} ${p.unit}',
+              t.currentStock
+                  .replaceAll('{qty}', _fmtQty(p.stockOnHand, decimal: p.isDecimalUnit))
+                  .replaceAll('{unit}', p.unit),
               style: TextStyle(color: AppColors.muted),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: deltaCtrl,
               keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-              decoration: const InputDecoration(labelText: 'Quantity delta (+/-)'),
+              decoration: InputDecoration(labelText: t.quantityDelta),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: reasonCtrl,
-              decoration: const InputDecoration(labelText: 'Reason (required)'),
+              decoration: InputDecoration(labelText: t.reasonRequired),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Apply')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(t.apply)),
         ],
       ),
     );
@@ -1658,7 +1710,7 @@ class InventoryPage extends StatelessWidget {
             quantityDelta: delta,
             reason: reason,
           );
-      if (context.mounted) await _snack(context, 'Stock adjusted');
+      if (context.mounted) await _snack(context, t.stockAdjusted);
     } catch (e) {
       if (context.mounted) await _snack(context, e.toString(), error: true);
     }
@@ -1666,6 +1718,7 @@ class InventoryPage extends StatelessWidget {
 
   Future<void> _receive(BuildContext context, {Product? product}) async {
     final store = context.read<RetailStore>();
+    final t = _t(context);
     Product? selected = product;
     final qtyCtrl = TextEditingController(text: '1');
     final costCtrl = TextEditingController(text: product?.costPrice.toString() ?? '');
@@ -1675,7 +1728,7 @@ class InventoryPage extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('Receive stock'),
+          title: Text(t.receiveStock),
           content: SizedBox(
             width: 400,
             child: Column(
@@ -1683,7 +1736,7 @@ class InventoryPage extends StatelessWidget {
               children: [
                 DropdownButtonFormField<Product>(
                   value: selected,
-                  decoration: const InputDecoration(labelText: 'Product'),
+                  decoration: InputDecoration(labelText: t.productLabel),
                   items: store.productList
                       .where((p) => p.active)
                       .map((p) => DropdownMenuItem(value: p, child: Text(p.name)))
@@ -1699,25 +1752,25 @@ class InventoryPage extends StatelessWidget {
                 TextField(
                   controller: qtyCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Quantity'),
+                  decoration: InputDecoration(labelText: t.quantity),
                 ),
                 const SizedBox(height: 10),
                 TextField(
                   controller: costCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Unit cost'),
+                  decoration: InputDecoration(labelText: t.unitCost),
                 ),
                 const SizedBox(height: 10),
                 TextField(
                   controller: invoiceCtrl,
-                  decoration: const InputDecoration(labelText: 'Invoice # (optional)'),
+                  decoration: InputDecoration(labelText: t.invoiceOptional),
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Receive')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t.cancel)),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(t.receiveBtn)),
           ],
         ),
       ),
@@ -1740,7 +1793,7 @@ class InventoryPage extends StatelessWidget {
         unitCost: cost,
         invoiceNumber: invoice.isEmpty ? null : invoice,
       );
-      if (context.mounted) await _snack(context, 'Stock received');
+      if (context.mounted) await _snack(context, t.stockReceived);
     } catch (e) {
       if (context.mounted) await _snack(context, e.toString(), error: true);
     }
@@ -1772,7 +1825,7 @@ class InventoryPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Low stock alerts', style: Theme.of(context).textTheme.titleLarge),
+                Text(t.lowStockAlerts, style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 8,
@@ -1796,7 +1849,7 @@ class InventoryPage extends StatelessWidget {
           child: products.isEmpty
               ? Padding(
                   padding: const EdgeInsets.all(32),
-                  child: Center(child: Text('No products', style: TextStyle(color: AppColors.muted))),
+                  child: Center(child: Text(t.noProducts, style: TextStyle(color: AppColors.muted))),
                 )
               : Column(
                   children: products.map((p) {
@@ -1822,7 +1875,9 @@ class InventoryPage extends StatelessWidget {
                               children: [
                                 Text(p.name, style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w700)),
                                 Text(
-                                  'Reorder ${p.reorderLevel} · ${p.sku}',
+                                  t.reorderLine
+                                      .replaceAll('{level}', '${p.reorderLevel}')
+                                      .replaceAll('{sku}', p.sku),
                                   style: TextStyle(color: AppColors.muted, fontSize: 12),
                                 ),
                               ],
@@ -1835,12 +1890,12 @@ class InventoryPage extends StatelessWidget {
                           const SizedBox(width: 8),
                           OutlinedButton(
                             onPressed: () => _adjust(context, p),
-                            child: const Text('Adjust'),
+                            child: Text(t.adjustBtn),
                           ),
                           const SizedBox(width: 6),
                           OutlinedButton(
                             onPressed: () => _receive(context, product: p),
-                            child: const Text('Receive'),
+                            child: Text(t.receiveBtn),
                           ),
                         ],
                       ),
@@ -1854,7 +1909,7 @@ class InventoryPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Recent movements', style: Theme.of(context).textTheme.titleLarge),
+                Text(t.recentMovements, style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 10),
                 ...store.stockHistory.take(12).map((m) {
                   return Padding(
@@ -1863,7 +1918,7 @@ class InventoryPage extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            '${m.productName ?? 'Product'} · ${m.movementType}',
+                            '${m.productName ?? t.productFallback} · ${m.movementType}',
                             style: TextStyle(color: AppColors.text),
                           ),
                         ),
@@ -1900,71 +1955,16 @@ class StaffPage extends StatelessWidget {
   const StaffPage({super.key});
 
   Future<void> _edit(BuildContext context, {Employee? existing}) async {
-    final nameCtrl = TextEditingController(text: existing?.name ?? '');
-    final userCtrl = TextEditingController(text: existing?.username ?? '');
-    var role = existing?.role ?? 'cashier';
-    var active = existing?.active ?? true;
-
-    final result = await showDialog<Employee>(
+    final result = await showDialog<(Employee, String?)>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocal) => AlertDialog(
-          title: Text(existing == null ? 'Add employee' : 'Edit employee'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
-              const SizedBox(height: 10),
-              TextField(controller: userCtrl, decoration: const InputDecoration(labelText: 'Username')),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: role,
-                decoration: const InputDecoration(labelText: 'Role'),
-                items: staffRoles.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
-                onChanged: (v) => setLocal(() => role = v ?? 'cashier'),
-              ),
-              Material(
-                type: MaterialType.transparency,
-                child: SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Active'),
-                  value: active,
-                  onChanged: (v) => setLocal(() => active = v),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: () {
-                final name = nameCtrl.text.trim();
-                if (name.isEmpty) return;
-                Navigator.pop(
-                  ctx,
-                  Employee(
-                    id: existing?.id,
-                    name: name,
-                    username: userCtrl.text.trim().isEmpty ? null : userCtrl.text.trim(),
-                    role: role,
-                    active: active,
-                  ),
-                );
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
+      builder: (_) => _EmployeeEditorDialog(existing: existing),
     );
-    nameCtrl.dispose();
-    userCtrl.dispose();
     if (result == null || !context.mounted) return;
     final store = context.read<RetailStore>();
     if (existing == null) {
-      await store.addEmployee(result);
+      await store.addEmployee(result.$1, pin: result.$2);
     } else {
-      await store.updateEmployee(result);
+      await store.updateEmployee(result.$1, pin: result.$2);
     }
   }
 
@@ -1990,7 +1990,7 @@ class StaffPage extends StatelessWidget {
         const SizedBox(height: 20),
         if (store.employees.isEmpty)
           ShopPanel(
-            child: Center(child: Text('No employees yet', style: TextStyle(color: AppColors.muted))),
+            child: Center(child: Text(t.noEmployeesYet, style: TextStyle(color: AppColors.muted))),
           )
         else
           ...store.employees.map((e) {
@@ -2014,23 +2014,23 @@ class StaffPage extends StatelessWidget {
                         children: [
                           Text(e.name, style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w700)),
                           Text(
-                            '${e.role}${e.username != null ? ' · @${e.username}' : ''}',
+                            '${t.roleLabel(e.role)}${e.username != null ? ' · @${e.username}' : ''}',
                             style: TextStyle(color: AppColors.muted, fontSize: 12),
                           ),
                         ],
                       ),
                     ),
                     StatusBadge(
-                      text: e.active ? 'active' : 'inactive',
+                      text: e.active ? t.active : t.inactive,
                       color: e.active ? AppColors.green : AppColors.muted,
                     ),
                     const SizedBox(width: 8),
                     if (isCurrent)
-                      const StatusBadge(text: 'current', color: AppColors.accent)
+                      StatusBadge(text: t.badgeCurrent, color: AppColors.accent)
                     else
                       OutlinedButton(
                         onPressed: () => store.setCurrentEmployee(e),
-                        child: const Text('Set current'),
+                        child: Text(t.setCurrent),
                       ),
                     IconButton(
                       icon: const Icon(Icons.edit_outlined, size: 18),
@@ -2046,6 +2046,114 @@ class StaffPage extends StatelessWidget {
   }
 }
 
+class _EmployeeEditorDialog extends StatefulWidget {
+  final Employee? existing;
+
+  const _EmployeeEditorDialog({this.existing});
+
+  @override
+  State<_EmployeeEditorDialog> createState() => _EmployeeEditorDialogState();
+}
+
+class _EmployeeEditorDialogState extends State<_EmployeeEditorDialog> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _userCtrl;
+  late final TextEditingController _pinCtrl;
+  late String _role;
+  late bool _active;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existing;
+    _nameCtrl = TextEditingController(text: e?.name ?? '');
+    _userCtrl = TextEditingController(text: e?.username ?? '');
+    _pinCtrl = TextEditingController();
+    _role = e?.role ?? 'cashier';
+    _active = e?.active ?? true;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _userCtrl.dispose();
+    _pinCtrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final name = _nameCtrl.text.trim();
+    final username = _userCtrl.text.trim();
+    final pin = _pinCtrl.text.trim();
+    if (name.isEmpty) return;
+    if (username.isNotEmpty && pin.isNotEmpty && pin.length < 4) return;
+    if (widget.existing == null && username.isNotEmpty && pin.length < 4) return;
+    Navigator.pop(
+      context,
+      (
+        Employee(
+          id: widget.existing?.id,
+          name: name,
+          username: username.isEmpty ? null : username,
+          role: _role,
+          active: _active,
+        ),
+        pin.isEmpty ? null : pin,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = _t(context);
+    return AlertDialog(
+      title: Text(widget.existing == null ? t.addEmployee : t.editEmployee),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: _nameCtrl, decoration: InputDecoration(labelText: t.colName)),
+            const SizedBox(height: 10),
+            TextField(controller: _userCtrl, decoration: InputDecoration(labelText: t.username)),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _pinCtrl,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: t.pin,
+                hintText: widget.existing == null ? t.pinHint : t.keepCurrentPin,
+              ),
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              value: _role,
+              decoration: InputDecoration(labelText: t.role),
+              items: staffRoles
+                  .map((r) => DropdownMenuItem(value: r, child: Text(t.roleLabel(r))))
+                  .toList(),
+              onChanged: (v) => setState(() => _role = v ?? 'cashier'),
+            ),
+            Material(
+              type: MaterialType.transparency,
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(t.active),
+                value: _active,
+                onChanged: (v) => setState(() => _active = v),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(t.cancel)),
+        FilledButton(onPressed: _save, child: Text(t.save)),
+      ],
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Shifts
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2054,31 +2162,34 @@ class ShiftsPage extends StatelessWidget {
   const ShiftsPage({super.key});
 
   Future<void> _open(BuildContext context) async {
-    final amount = await _promptAmount(context, title: 'Open shift', label: 'Opening cash');
+    final t = AppStrings.of(context.read<RetailStore>().language);
+    final amount = await _promptAmount(context, title: t.openShiftBtn, label: t.openingCash);
     if (amount == null || !context.mounted) return;
     try {
       await context.read<RetailStore>().openShift(openingCash: amount);
-      if (context.mounted) await _snack(context, 'Shift opened');
+      if (context.mounted) await _snack(context, t.shiftOpened);
     } catch (e) {
       if (context.mounted) await _snack(context, e.toString(), error: true);
     }
   }
 
   Future<void> _close(BuildContext context) async {
-    final amount = await _promptAmount(context, title: 'Close shift', label: 'Closing cash count');
+    final t = AppStrings.of(context.read<RetailStore>().language);
+    final amount = await _promptAmount(context, title: t.closeBtn, label: t.colClosing);
     if (amount == null || !context.mounted) return;
     try {
       await context.read<RetailStore>().closeShift(closingCash: amount);
-      if (context.mounted) await _snack(context, 'Shift closed');
+      if (context.mounted) await _snack(context, t.shiftClosed);
     } catch (e) {
       if (context.mounted) await _snack(context, e.toString(), error: true);
     }
   }
 
   Future<void> _cashMove(BuildContext context, {required bool isIn}) async {
-    final amount = await _promptAmount(context, title: isIn ? 'Cash in' : 'Cash out');
+    final t = AppStrings.of(context.read<RetailStore>().language);
+    final amount = await _promptAmount(context, title: isIn ? t.cashInBtn : t.cashOutBtn);
     if (amount == null || amount <= 0 || !context.mounted) return;
-    final note = await _promptText(context, title: 'Note (optional)', label: 'Note');
+    final note = await _promptText(context, title: t.noteOptional, label: t.note);
     if (!context.mounted) return;
     try {
       if (isIn) {
@@ -2086,7 +2197,7 @@ class ShiftsPage extends StatelessWidget {
       } else {
         await context.read<RetailStore>().cashOut(amount: amount, note: note);
       }
-      if (context.mounted) await _snack(context, isIn ? 'Cash in recorded' : 'Cash out recorded');
+      if (context.mounted) await _snack(context, isIn ? t.cashInRecorded : t.cashOutRecorded);
     } catch (e) {
       if (context.mounted) await _snack(context, e.toString(), error: true);
     }
@@ -2119,29 +2230,29 @@ class ShiftsPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      shift != null ? 'Shift open' : 'No active shift',
+                      shift != null ? t.shiftOpen : t.noActiveShift,
                       style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w700, fontSize: 16),
                     ),
                     Text(
                       shift != null
                           ? '${shift.employeeName ?? store.currentEmployee?.name ?? t.staffFallback} · ${_fmtDate(shift.openedAt, t)}'
-                          : 'Open a shift to start selling with a cash drawer',
+                          : t.openShiftHint,
                       style: TextStyle(color: AppColors.muted, fontSize: 12),
                     ),
                   ],
                 ),
               ),
               if (shift == null)
-                FilledButton(onPressed: () => _open(context), child: const Text('Open shift'))
+                FilledButton(onPressed: () => _open(context), child: Text(t.openShiftBtn))
               else ...[
-                OutlinedButton(onPressed: () => _cashMove(context, isIn: true), child: const Text('Cash in')),
+                OutlinedButton(onPressed: () => _cashMove(context, isIn: true), child: Text(t.cashInBtn)),
                 const SizedBox(width: 8),
-                OutlinedButton(onPressed: () => _cashMove(context, isIn: false), child: const Text('Cash out')),
+                OutlinedButton(onPressed: () => _cashMove(context, isIn: false), child: Text(t.cashOutBtn)),
                 const SizedBox(width: 8),
                 FilledButton(
                   onPressed: () => _close(context),
                   style: FilledButton.styleFrom(backgroundColor: AppColors.red),
-                  child: const Text('Close'),
+                  child: Text(t.closeBtn),
                 ),
               ],
             ],
@@ -2154,25 +2265,25 @@ class ShiftsPage extends StatelessWidget {
             runSpacing: 12,
             children: [
               StatCard(
-                label: 'Opening cash',
+                label: t.openingCash,
                 value: Money.format(summary.shift.openingCash, symbol: sym),
                 color: AppColors.cyan,
                 icon: Icons.savings_outlined,
               ),
               StatCard(
-                label: 'Cash sales',
+                label: t.cashSales,
                 value: Money.format(summary.cashSales, symbol: sym),
                 color: AppColors.green,
                 icon: Icons.point_of_sale,
               ),
               StatCard(
-                label: 'Cash in / out',
+                label: t.cashInOut,
                 value: '${Money.format(summary.cashIn, symbol: sym)} / ${Money.format(summary.cashOut, symbol: sym)}',
                 color: AppColors.amber,
                 icon: Icons.swap_vert,
               ),
               StatCard(
-                label: 'Expected cash',
+                label: t.expectedCash,
                 value: Money.format(summary.expectedCash, symbol: sym),
                 color: AppColors.accent,
                 icon: Icons.account_balance_wallet_outlined,
@@ -2184,10 +2295,10 @@ class ShiftsPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Cash movements', style: Theme.of(context).textTheme.titleLarge),
+                Text(t.cashMovements, style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 10),
                 if (summary.movements.isEmpty)
-                  Text('No movements yet', style: TextStyle(color: AppColors.muted))
+                  Text(t.noMovementsYet, style: TextStyle(color: AppColors.muted))
                 else
                   ...summary.movements.map((m) {
                     final isIn = m.movementType == 'in';
@@ -2203,7 +2314,7 @@ class ShiftsPage extends StatelessWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              '${m.movementType.toUpperCase()}${m.note != null && m.note!.isNotEmpty ? ' · ${m.note}' : ''}',
+                              '${isIn ? t.movementIn : t.movementOut}${m.note != null && m.note!.isNotEmpty ? ' · ${m.note}' : ''}',
                               style: TextStyle(color: AppColors.text),
                             ),
                           ),
@@ -2232,26 +2343,26 @@ class ShiftsPage extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text('Shift history', style: Theme.of(context).textTheme.titleLarge),
+                child: Text(t.shiftHistoryTitle, style: Theme.of(context).textTheme.titleLarge),
               ),
               if (store.shiftHistory.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(24),
-                  child: Center(child: Text('No shifts yet', style: TextStyle(color: AppColors.muted))),
+                  child: Center(child: Text(t.noShiftsYet, style: TextStyle(color: AppColors.muted))),
                 )
               else
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('Employee')),
-                      DataColumn(label: Text('Opened')),
-                      DataColumn(label: Text('Closed')),
-                      DataColumn(label: Text('Opening')),
-                      DataColumn(label: Text('Closing')),
-                      DataColumn(label: Text('Expected')),
-                      DataColumn(label: Text('Diff')),
-                      DataColumn(label: Text('Status')),
+                    columns: [
+                      DataColumn(label: Text(t.colEmployee)),
+                      DataColumn(label: Text(t.colOpened)),
+                      DataColumn(label: Text(t.colClosed)),
+                      DataColumn(label: Text(t.colOpening)),
+                      DataColumn(label: Text(t.colClosing)),
+                      DataColumn(label: Text(t.colExpected)),
+                      DataColumn(label: Text(t.colDiff)),
+                      DataColumn(label: Text(t.colStatus)),
                     ],
                     rows: store.shiftHistory.map((s) {
                       return DataRow(
@@ -2274,7 +2385,7 @@ class ShiftsPage extends StatelessWidget {
                           ),
                           DataCell(
                             StatusBadge(
-                              text: s.status,
+                              text: t.shiftStatus(s.status),
                               color: s.status == 'open' ? AppColors.accent : AppColors.muted,
                             ),
                           ),
@@ -2305,6 +2416,18 @@ class ReportsPage extends StatefulWidget {
 class _ReportsPageState extends State<ReportsPage> {
   String _period = 'monthly';
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load(_period));
+  }
+
+  String _trendLabel(DateTime date) {
+    if (_period == 'daily') return DateFormat('d MMM').format(date);
+    if (_period == 'weekly') return DateFormat('EEE').format(date);
+    return DateFormat('d').format(date);
+  }
+
   Future<void> _load(String period) async {
     setState(() => _period = period);
     final now = DateTime.now();
@@ -2326,12 +2449,6 @@ class _ReportsPageState extends State<ReportsPage> {
     final t = AppStrings.of(store.language);
     final r = store.reportStats;
     final sym = store.currencySymbol;
-    final maxQty = r.topProducts.isEmpty
-        ? 1.0
-        : r.topProducts.map((p) => p.quantity).reduce((a, b) => a > b ? a : b).clamp(1, double.infinity);
-    final maxPay = r.payments.isEmpty
-        ? 1.0
-        : r.payments.map((p) => p.amount).reduce((a, b) => a > b ? a : b).clamp(1, double.infinity);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
@@ -2340,11 +2457,11 @@ class _ReportsPageState extends State<ReportsPage> {
         const SizedBox(height: 14),
         Row(
           children: [
-            SoftChip(label: 'Daily', selected: _period == 'daily', onTap: () => _load('daily')),
+            SoftChip(label: t.periodDaily, selected: _period == 'daily', onTap: () => _load('daily')),
             const SizedBox(width: 8),
-            SoftChip(label: 'Weekly', selected: _period == 'weekly', onTap: () => _load('weekly')),
+            SoftChip(label: t.periodWeekly, selected: _period == 'weekly', onTap: () => _load('weekly')),
             const SizedBox(width: 8),
-            SoftChip(label: 'Monthly', selected: _period == 'monthly', onTap: () => _load('monthly')),
+            SoftChip(label: t.periodMonthly, selected: _period == 'monthly', onTap: () => _load('monthly')),
           ],
         ),
         const SizedBox(height: 20),
@@ -2353,25 +2470,25 @@ class _ReportsPageState extends State<ReportsPage> {
           runSpacing: 14,
           children: [
             StatCard(
-              label: 'Revenue',
+              label: t.revenue,
               value: Money.format(r.totalRevenue, symbol: sym),
               color: AppColors.accent,
               icon: Icons.payments_outlined,
             ),
             StatCard(
-              label: 'Est. Profit',
+              label: t.estProfit,
               value: Money.format(r.estimatedProfit, symbol: sym),
               color: AppColors.green,
               icon: Icons.trending_up,
             ),
             StatCard(
-              label: 'Sales',
+              label: t.salesCount,
               value: '${r.numberOfSales}',
               color: AppColors.cyan,
               icon: Icons.receipt_long,
             ),
             StatCard(
-              label: 'Avg sale',
+              label: t.avgSale,
               value: Money.format(r.averageSale, symbol: sym),
               color: AppColors.amber,
               icon: Icons.analytics_outlined,
@@ -2379,99 +2496,51 @@ class _ReportsPageState extends State<ReportsPage> {
           ],
         ),
         const SizedBox(height: 20),
+        ReportChartPanel(
+          title: t.salesTrend,
+          height: 220,
+          child: SalesTrendChart(
+            points: r.dailyTrend,
+            formatLabel: _trendLabel,
+            emptyLabel: t.noSalesInPeriod,
+          ),
+        ),
+        const SizedBox(height: 16),
+        ReportChartPanel(
+          title: t.revenueVsProfit,
+          height: 200,
+          child: RevenueProfitChart(
+            revenue: r.totalRevenue,
+            profit: r.estimatedProfit,
+            revenueLabel: t.revenue,
+            profitLabel: t.estProfit,
+            currencySymbol: sym,
+          ),
+        ),
+        const SizedBox(height: 16),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: ShopPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Top products', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 14),
-                    if (r.topProducts.isEmpty)
-                      Text('No sales in this period', style: TextStyle(color: AppColors.muted))
-                    else
-                      ...r.topProducts.map((p) {
-                        final ratio = (p.quantity / maxQty).clamp(0.0, 1.0);
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(p.name, style: TextStyle(color: AppColors.text)),
-                                  ),
-                                  Text(
-                                    _fmtQty(p.quantity),
-                                    style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: ratio,
-                                  minHeight: 8,
-                                  backgroundColor: AppColors.cardAlt,
-                                  color: AppColors.accent,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                  ],
+              child: ReportChartPanel(
+                title: t.topProducts,
+                height: 220,
+                child: TopProductsBarChart(
+                  products: r.topProducts,
+                  emptyLabel: t.noSalesInPeriod,
                 ),
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: ShopPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Payment breakdown', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 14),
-                    if (r.payments.isEmpty)
-                      Text('No payments yet', style: TextStyle(color: AppColors.muted))
-                    else
-                      ...r.payments.map((p) {
-                        final ratio = (p.amount / maxPay).clamp(0.0, 1.0);
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      p.method.toUpperCase(),
-                                      style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                  Text(Money.format(p.amount, symbol: sym)),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: ratio,
-                                  minHeight: 8,
-                                  backgroundColor: AppColors.cardAlt,
-                                  color: AppColors.cyan,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                  ],
+              child: ReportChartPanel(
+                title: t.paymentBreakdown,
+                height: 220,
+                child: PaymentDonutChart(
+                  payments: r.payments,
+                  methodLabel: t.paymentMethod,
+                  currencySymbol: sym,
+                  emptyLabel: t.noPaymentsYet,
                 ),
               ),
             ),

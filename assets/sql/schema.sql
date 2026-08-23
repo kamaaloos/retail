@@ -187,6 +187,56 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT
 );
 
+CREATE TABLE IF NOT EXISTS discount_rules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  discount_type TEXT NOT NULL DEFAULT 'percent',
+  value REAL NOT NULL DEFAULT 0,
+  min_purchase REAL NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1,
+  scope TEXT NOT NULL DEFAULT 'all',
+  start_date TEXT,
+  end_date TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS discount_rule_products (
+  discount_rule_id INTEGER NOT NULL,
+  product_id INTEGER NOT NULL,
+  PRIMARY KEY (discount_rule_id, product_id),
+  FOREIGN KEY (discount_rule_id) REFERENCES discount_rules(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS payment_methods (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT NOT NULL,
+  label TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS pos_devices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  device_type TEXT NOT NULL DEFAULT 'terminal',
+  identifier TEXT,
+  active INTEGER NOT NULL DEFAULT 1,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS printers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  printer_type TEXT NOT NULL DEFAULT 'receipt',
+  connection TEXT NOT NULL DEFAULT 'usb',
+  address TEXT,
+  paper_width INTEGER NOT NULL DEFAULT 80,
+  is_default INTEGER NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1
+);
+
 CREATE TABLE IF NOT EXISTS audit_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   employee_id INTEGER,

@@ -237,3 +237,100 @@ class ProductThumb extends StatelessWidget {
     );
   }
 }
+
+class StoreLogoPreview extends StatelessWidget {
+  final String? imagePath;
+  final double size;
+  final double radius;
+
+  const StoreLogoPreview({
+    super.key,
+    required this.imagePath,
+    this.size = 72,
+    this.radius = 12,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final path = imagePath;
+    final Widget child;
+    if (path != null && path.isNotEmpty && File(path).existsSync()) {
+      child = Image.file(
+        File(path),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+      );
+    } else {
+      child = ColoredBox(
+        color: AppColors.panel,
+        child: Center(
+          child: Icon(Icons.storefront, color: AppColors.accent, size: size * 0.45),
+        ),
+      );
+    }
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: AppColors.line),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
+    );
+  }
+}
+
+class AppLogo extends StatelessWidget {
+  final double size;
+  final double radius;
+  final String? storeLogoPath;
+
+  const AppLogo({super.key, this.size = 36, this.radius = 10, this.storeLogoPath});
+
+  @override
+  Widget build(BuildContext context) {
+    final path = storeLogoPath;
+    if (path != null && path.isNotEmpty && File(path).existsSync()) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: Image.file(
+          File(path),
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _defaultAsset(),
+        ),
+      );
+    }
+    return _defaultAsset();
+  }
+
+  Widget _defaultAsset() {
+    const logoBg = Color(0xFFF8FAFC);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: Container(
+        width: size,
+        height: size,
+        padding: EdgeInsets.all(size * 0.06),
+        decoration: BoxDecoration(
+          color: logoBg,
+          borderRadius: BorderRadius.circular(radius),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Image.asset(
+          'assets/branding/maylesoft_logo.png',
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => Container(
+            width: size,
+            height: size,
+            color: AppColors.accent,
+            child: Icon(Icons.storefront, color: Colors.white, size: size * 0.55),
+          ),
+        ),
+      ),
+    );
+  }
+}

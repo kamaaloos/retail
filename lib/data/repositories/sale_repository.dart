@@ -278,6 +278,38 @@ class SaleRepository {
       GROUP BY pay.method
     ''', [_date(from), _date(to)]);
 
+    final trendRows = await _db.rawQuery('''
+      SELECT
+        date(s.sold_at) AS day,
+        COALESCE(SUM(s.total), 0) AS revenue,
+        COUNT(*) AS txn_count
+      FROM sales s
+      WHERE s.status = 'completed'
+        AND date(s.sold_at) >= date(?)
+        AND date(s.sold_at) <= date(?)
+      GROUP BY date(s.sold_at)
+      ORDER BY day
+    ''', [_date(from), _date(to)]);
+
+    final trendMap = {
+      for (final row in trendRows)
+        row['day'] as String: DailySalesPoint(
+          date: DateTime.parse(row['day'] as String),
+          revenue: (row['revenue'] as num?)?.toDouble() ?? 0,
+          transactions: (row['txn_count'] as int?) ?? 0,
+        ),
+    };
+    final dailyTrend = <DailySalesPoint>[];
+    var cursor = DateTime(from.year, from.month, from.day);
+    final end = DateTime(to.year, to.month, to.day);
+    while (!cursor.isAfter(end)) {
+      final key = _date(cursor);
+      dailyTrend.add(
+        trendMap[key] ?? DailySalesPoint(date: cursor),
+      );
+      cursor = cursor.add(const Duration(days: 1));
+    }
+
     return ReportStats(
       totalRevenue: revenue,
       estimatedProfit: profit,
@@ -295,6 +327,7 @@ class SaleRepository {
                 amount: (r['amount'] as num?)?.toDouble() ?? 0,
               ))
           .toList(),
+      dailyTrend: dailyTrend,
     );
   }
 

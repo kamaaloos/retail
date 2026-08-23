@@ -3,12 +3,15 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
+import 'auth/role_permissions.dart';
 import 'data/database.dart';
 import 'l10n/app_strings.dart';
 import 'providers/retail_store.dart';
+import 'ui/login_page.dart';
 import 'ui/pages.dart';
 import 'ui/settings_page.dart';
 import 'ui/theme.dart';
+import 'ui/widgets.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +45,7 @@ class ShopXApp extends StatelessWidget {
       title: strings.appName,
       debugShowCheckedModeBanner: false,
       theme: buildRetailTheme(dark: store.darkMode),
-      locale: strings.locale,
+      locale: strings.materialLocale,
       supportedLocales: const [
         Locale('en', 'US'),
         Locale('en', 'GB'),
@@ -60,8 +63,26 @@ class ShopXApp extends StatelessWidget {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: const AppShell(),
+      home: const AppRoot(),
     );
+  }
+}
+
+class AppRoot extends StatelessWidget {
+  const AppRoot({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<RetailStore>();
+    if (store.loading) {
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
+      );
+    }
+    if (!store.isLoggedIn) {
+      return const LoginPage();
+    }
+    return const AppShell();
   }
 }
 
@@ -73,26 +94,41 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  int index = 0;
+  AppPage _page = AppPage.dashboard;
 
-  List<(IconData, IconData, String)> _destinations(AppStrings s) => [
-        (Icons.dashboard_outlined, Icons.dashboard, s.dashboard),
-        (Icons.point_of_sale_outlined, Icons.point_of_sale, s.pos),
-        (Icons.inventory_2_outlined, Icons.inventory_2, s.products),
-        (Icons.category_outlined, Icons.category, s.categories),
-        (Icons.receipt_long_outlined, Icons.receipt_long, s.salesHistory),
-        (Icons.warehouse_outlined, Icons.warehouse, s.inventory),
-        (Icons.groups_outlined, Icons.groups, s.staff),
-        (Icons.schedule_outlined, Icons.schedule, s.shifts),
-        (Icons.assessment_outlined, Icons.assessment, s.reports),
-        (Icons.settings_outlined, Icons.settings, s.settings),
-      ];
+  String _pageLabel(AppPage page, AppStrings s) {
+    return switch (page) {
+      AppPage.dashboard => s.dashboard,
+      AppPage.pos => s.pos,
+      AppPage.products => s.products,
+      AppPage.categories => s.categories,
+      AppPage.salesHistory => s.salesHistory,
+      AppPage.inventory => s.inventory,
+      AppPage.staff => s.staff,
+      AppPage.shifts => s.shifts,
+      AppPage.reports => s.reports,
+      AppPage.settings => s.settings,
+    };
+  }
+
+  void _goTo(AppPage page, String role) {
+    if (!RolePermissions.canAccess(role, page)) return;
+    setState(() => _page = page);
+  }
 
   @override
   Widget build(BuildContext context) {
     final store = context.watch<RetailStore>();
     final strings = AppStrings.of(store.language);
-    final destinations = _destinations(strings);
+    final role = store.loggedInEmployee?.role ?? 'cashier';
+    final allowed = RolePermissions.allowedPages(role);
+    final activePage = allowed.contains(_page) ? _page : RolePermissions.defaultPage(role);
+    if (activePage != _page) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _page = activePage);
+      });
+    }
+    final session = store.loggedInEmployee;
 
     return Scaffold(
       body: Row(
@@ -107,17 +143,16 @@ class _AppShellState extends State<AppShell> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.accent,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.storefront, color: Colors.white, size: 20),
-                      ),
+                      AppLogo(size: 36, radius: 10, storeLogoPath: store.storeLogoPath),
                       const SizedBox(width: 10),
-                      Text(strings.appName, style: Theme.of(context).textTheme.titleLarge),
+                      Expanded(
+                        child: Text(
+                          strings.appName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 16),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -125,14 +160,14 @@ class _AppShellState extends State<AppShell> {
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
-                    itemCount: destinations.length,
+                    itemCount: allowed.length,
                     itemBuilder: (context, i) {
-                      final d = destinations[i];
-                      final selected = index == i;
+                      final page = allowed[i];
+                      final selected = activePage == page;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 4),
                         child: InkWell(
-                          onTap: () => setState(() => index = i),
+                          onTap: () => _goTo(page, role),
                           borderRadius: BorderRadius.circular(10),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
@@ -144,14 +179,14 @@ class _AppShellState extends State<AppShell> {
                             child: Row(
                               children: [
                                 Icon(
-                                  selected ? d.$2 : d.$1,
+                                  selected ? page.iconFilled : page.iconOutlined,
                                   size: 20,
                                   color: selected ? AppColors.accent : AppColors.muted,
                                 ),
                                 const SizedBox(width: 12),
                                 Flexible(
                                   child: Text(
-                                    d.$3,
+                                    _pageLabel(page, strings),
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       color: selected ? AppColors.text : AppColors.muted,
@@ -181,7 +216,7 @@ class _AppShellState extends State<AppShell> {
                         radius: 16,
                         backgroundColor: AppColors.accent,
                         child: Text(
-                          (store.currentEmployee?.name ?? 'A').characters.first.toUpperCase(),
+                          (session?.name ?? 'A').characters.first.toUpperCase(),
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -191,17 +226,24 @@ class _AppShellState extends State<AppShell> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              store.currentEmployee?.name ?? 'Admin',
+                              session?.name ?? strings.adminFallback,
                               style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.text),
                             ),
                             Text(
-                              (store.currentEmployee?.role ?? 'owner').toUpperCase(),
+                              strings.roleLabel(session?.role ?? 'owner').toUpperCase(),
                               style: TextStyle(color: AppColors.muted, fontSize: 11),
                             ),
                           ],
                         ),
                       ),
-                      Icon(Icons.logout, size: 18, color: AppColors.muted),
+                      InkWell(
+                        onTap: () => context.read<RetailStore>().logout(),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(Icons.logout, size: 18, color: AppColors.muted),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -214,8 +256,8 @@ class _AppShellState extends State<AppShell> {
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 220),
                 child: KeyedSubtree(
-                  key: ValueKey(index),
-                  child: _page(index),
+                  key: ValueKey(activePage.navIndex),
+                  child: _buildPage(activePage, role, strings),
                 ),
               ),
             ),
@@ -225,29 +267,34 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  Widget _page(int i) {
-    switch (i) {
-      case 1:
+  Widget _buildPage(AppPage page, String role, AppStrings strings) {
+    if (!RolePermissions.canAccess(role, page)) {
+      return Center(
+        child: Text(strings.accessDenied, style: TextStyle(color: AppColors.muted)),
+      );
+    }
+
+    switch (page) {
+      case AppPage.pos:
         return const PosPage();
-      case 2:
+      case AppPage.products:
         return const ProductsPage();
-      case 3:
+      case AppPage.categories:
         return const CategoriesPage();
-      case 4:
+      case AppPage.salesHistory:
         return const SalesHistoryPage();
-      case 5:
+      case AppPage.inventory:
         return const InventoryPage();
-      case 6:
+      case AppPage.staff:
         return const StaffPage();
-      case 7:
+      case AppPage.shifts:
         return const ShiftsPage();
-      case 8:
+      case AppPage.reports:
         return const ReportsPage();
-      case 9:
+      case AppPage.settings:
         return const SettingsPage();
-      case 0:
-      default:
-        return DashboardHome(onOpenPos: () => setState(() => index = 1));
+      case AppPage.dashboard:
+        return DashboardHome(onOpenPos: () => _goTo(AppPage.pos, role));
     }
   }
 }

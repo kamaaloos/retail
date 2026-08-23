@@ -12,6 +12,6 @@ void main() {
       ),
     );
 
-    expect(find.text('Shop X'), findsOneWidget);
+    expect(find.text('MayleSoft retail'), findsWidgets);
   });
 }

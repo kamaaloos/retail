@@ -1,6 +1,7 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../database.dart';
+import '../pin_auth.dart';
 import '../../models/staff.dart';
 
 class StaffRepository {
@@ -14,15 +15,45 @@ class StaffRepository {
     return rows.map(Employee.fromMap).toList();
   }
 
-  Future<int> insert(Employee employee) => _db.insert('employees', employee.toMap());
+  Future<int> insert(Employee employee, {String? pin}) async {
+    final map = employee.toMap();
+    if (pin != null && pin.isNotEmpty) {
+      map['pin_hash'] = PinAuth.hash(pin);
+    }
+    return _db.insert('employees', map);
+  }
 
-  Future<int> update(Employee employee) {
+  Future<int> update(Employee employee, {String? pin}) async {
+    final map = employee.toMap();
+    if (pin != null && pin.isNotEmpty) {
+      map['pin_hash'] = PinAuth.hash(pin);
+    }
     return _db.update(
       'employees',
-      employee.toMap(),
+      map,
       where: 'id = ?',
       whereArgs: [employee.id],
     );
+  }
+
+  Future<Employee?> authenticate({
+    required String username,
+    required String pin,
+  }) async {
+    final rows = await _db.query(
+      'employees',
+      where: 'LOWER(username) = ? AND active = 1',
+      whereArgs: [username.trim().toLowerCase()],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+
+    final row = rows.first;
+    final hash = row['pin_hash'] as String?;
+    if (hash == null || hash.isEmpty || !PinAuth.verify(pin, hash)) {
+      return null;
+    }
+    return Employee.fromMap(row);
   }
 
   Future<Shift?> currentOpenShift() async {

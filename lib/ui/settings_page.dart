@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,6 +6,7 @@ import '../l10n/app_strings.dart';
 import '../providers/retail_store.dart';
 import 'theme.dart';
 import 'widgets.dart';
+import 'settings_tabs.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -31,16 +33,10 @@ class _SettingsPageState extends State<SettingsPage> {
   String _language = 'en_US';
   bool _darkMode = true;
   bool _ready = false;
-
-  static const _tabs = [
-    (Icons.tune, 'General'),
-    (Icons.percent, 'Discounts'),
-    (Icons.payments_outlined, 'Payment Methods'),
-    (Icons.devices, 'POS Devices'),
-    (Icons.print_outlined, 'Printers'),
-    (Icons.backup_outlined, 'Backup & Restore'),
-    (Icons.wifi, 'Network'),
-  ];
+  String? _storeLogoPath;
+  String? _pickedLogoSource;
+  bool _clearLogo = false;
+  bool _savingLogo = false;
 
   @override
   void initState() {
@@ -73,7 +69,32 @@ class _SettingsPageState extends State<SettingsPage> {
     _taxType = store.taxType;
     _language = store.language;
     _darkMode = store.darkMode;
+    _storeLogoPath = store.storeLogoPath.isEmpty ? null : store.storeLogoPath;
+    _pickedLogoSource = null;
+    _clearLogo = false;
     setState(() => _ready = true);
+  }
+
+  String? get _effectiveLogoPath {
+    if (_clearLogo) return null;
+    return _pickedLogoSource ?? _storeLogoPath;
+  }
+
+  Future<void> _pickLogo() async {
+    if (_savingLogo) return;
+    final file = await FilePicker.pickFile(type: FileType.image);
+    if (file?.path == null || !mounted) return;
+    setState(() {
+      _pickedLogoSource = file!.path;
+      _clearLogo = false;
+    });
+  }
+
+  void _removeLogo() {
+    setState(() {
+      _clearLogo = true;
+      _pickedLogoSource = null;
+    });
   }
 
   @override
@@ -92,6 +113,8 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _save() async {
+    final strings = AppStrings.of(context.read<RetailStore>().language);
+    setState(() => _savingLogo = true);
     try {
       await context.read<RetailStore>().saveSettings(
             storeName: _storeName.text.trim().isEmpty ? 'Shop X' : _storeName.text.trim(),
@@ -108,16 +131,29 @@ class _SettingsPageState extends State<SettingsPage> {
             taxType: _taxType,
             language: _language,
             darkMode: _darkMode,
+            pickedStoreLogoSource: _pickedLogoSource,
+            clearStoreLogo: _clearLogo,
           );
       if (!mounted) return;
-      final strings = AppStrings.of(context.read<RetailStore>().language);
+      final store = context.read<RetailStore>();
+      setState(() {
+        _storeLogoPath = store.storeLogoPath.isEmpty ? null : store.storeLogoPath;
+        _pickedLogoSource = null;
+        _clearLogo = false;
+        _savingLogo = false;
+      });
+      final saved = AppStrings.of(store.language);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.settingsSaved)),
+        SnackBar(content: Text(saved.settingsSaved)),
       );
     } catch (e) {
       if (!mounted) return;
+      setState(() => _savingLogo = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save: $e'), backgroundColor: AppColors.red),
+        SnackBar(
+          content: Text(strings.couldNotSave.replaceAll('{error}', '$e')),
+          backgroundColor: AppColors.red,
+        ),
       );
     }
   }
@@ -126,8 +162,18 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final store = context.watch<RetailStore>();
     final strings = AppStrings.of(store.language);
+    final tabs = strings.settingsTabs;
+
     if (!_ready) {
       return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+    }
+
+    // Keep local language toggle in sync when changed elsewhere.
+    if (_language != store.language) {
+      _language = store.language;
+    }
+    if (_darkMode != store.darkMode) {
+      _darkMode = store.darkMode;
     }
 
     return ListView(
@@ -139,11 +185,11 @@ class _SettingsPageState extends State<SettingsPage> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              for (var i = 0; i < _tabs.length; i++) ...[
+              for (var i = 0; i < tabs.length; i++) ...[
                 if (i > 0) const SizedBox(width: 8),
                 _SettingsTab(
-                  icon: _tabs[i].$1,
-                  label: _tabs[i].$2,
+                  icon: tabs[i].$1,
+                  label: tabs[i].$2,
                   selected: _tab == i,
                   onTap: () => setState(() => _tab = i),
                 ),
@@ -152,13 +198,21 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         const SizedBox(height: 20),
-        if (_tab == 0) _buildGeneral(store) else _buildPlaceholder(_tabs[_tab].$2),
+        switch (_tab) {
+          0 => _buildGeneral(store, strings),
+          1 => const SettingsDiscountsTab(),
+          2 => const SettingsPaymentMethodsTab(),
+          3 => const SettingsPosDevicesTab(),
+          4 => const SettingsPrintersTab(),
+          5 => const SettingsBackupTab(),
+          6 => const SettingsNetworkTab(),
+          _ => _buildPlaceholder(tabs[_tab].$2, strings),
+        },
       ],
     );
   }
 
-  Widget _buildGeneral(RetailStore store) {
-    final strings = AppStrings.of(store.language);
+  Widget _buildGeneral(RetailStore store, AppStrings strings) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -171,11 +225,11 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Business Information', style: Theme.of(context).textTheme.titleLarge),
+                    Text(strings.businessInfo, style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 16),
                     TextField(
                       controller: _storeName,
-                      decoration: const InputDecoration(labelText: 'Store Name'),
+                      decoration: InputDecoration(labelText: strings.storeName),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -183,14 +237,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         Expanded(
                           child: TextField(
                             controller: _phone,
-                            decoration: const InputDecoration(labelText: 'Phone'),
+                            decoration: InputDecoration(labelText: strings.phone),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextField(
                             controller: _email,
-                            decoration: const InputDecoration(labelText: 'Email'),
+                            decoration: InputDecoration(labelText: strings.email),
                           ),
                         ),
                       ],
@@ -198,7 +252,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: _address,
-                      decoration: const InputDecoration(labelText: 'Address'),
+                      decoration: InputDecoration(labelText: strings.address),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -206,14 +260,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         Expanded(
                           child: TextField(
                             controller: _receiptHeader,
-                            decoration: const InputDecoration(labelText: 'Receipt Header'),
+                            decoration: InputDecoration(labelText: strings.receiptHeader),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextField(
                             controller: _receiptFooter,
-                            decoration: const InputDecoration(labelText: 'Receipt Footer'),
+                            decoration: InputDecoration(labelText: strings.receiptFooter),
                           ),
                         ),
                       ],
@@ -224,14 +278,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         Expanded(
                           child: TextField(
                             controller: _currencyCode,
-                            decoration: const InputDecoration(labelText: 'Currency Code'),
+                            decoration: InputDecoration(labelText: strings.currencyCode),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextField(
                             controller: _currencySymbol,
-                            decoration: const InputDecoration(labelText: 'Currency Symbol'),
+                            decoration: InputDecoration(labelText: strings.currencySymbol),
                           ),
                         ),
                       ],
@@ -242,14 +296,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         Expanded(
                           child: TextField(
                             controller: _taxName,
-                            decoration: const InputDecoration(labelText: 'Tax Name'),
+                            decoration: InputDecoration(labelText: strings.taxName),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextField(
                             controller: _taxRate,
-                            decoration: const InputDecoration(labelText: 'Tax Rate %'),
+                            decoration: InputDecoration(labelText: strings.taxRate),
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           ),
                         ),
@@ -257,10 +311,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             initialValue: _taxType,
-                            decoration: const InputDecoration(labelText: 'Tax Type'),
-                            items: const [
-                              DropdownMenuItem(value: 'exclusive', child: Text('Exclusive')),
-                              DropdownMenuItem(value: 'inclusive', child: Text('Inclusive')),
+                            decoration: InputDecoration(labelText: strings.taxType),
+                            items: [
+                              DropdownMenuItem(value: 'exclusive', child: Text(strings.taxExclusive)),
+                              DropdownMenuItem(value: 'inclusive', child: Text(strings.taxInclusive)),
                             ],
                             onChanged: (v) {
                               if (v != null) setState(() => _taxType = v);
@@ -279,15 +333,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       child: Row(
                         children: [
-                          Container(
-                            width: 72,
-                            height: 72,
-                            decoration: BoxDecoration(
-                              color: AppColors.panel,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.line),
-                            ),
-                            child: const Icon(Icons.storefront, color: AppColors.accent, size: 32),
+                          StoreLogoPreview(
+                            imagePath: _effectiveLogoPath,
+                            size: 72,
+                            radius: 12,
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -295,25 +344,30 @@ class _SettingsPageState extends State<SettingsPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Store Logo',
+                                  strings.storeLogo,
                                   style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w700),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Square logo recommended (e.g. 400×400). Used for receipts and branding.',
+                                  strings.storeLogoHint,
                                   style: TextStyle(color: AppColors.muted, fontSize: 12),
                                 ),
                                 const SizedBox(height: 10),
-                                OutlinedButton.icon(
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Logo upload will be available in a later update'),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      onPressed: _savingLogo ? null : _pickLogo,
+                                      icon: const Icon(Icons.upload, size: 16),
+                                      label: Text(strings.uploadLogo),
+                                    ),
+                                    if (_effectiveLogoPath != null)
+                                      TextButton(
+                                        onPressed: _savingLogo ? null : _removeLogo,
+                                        child: Text(strings.remove),
                                       ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.upload, size: 16),
-                                  label: const Text('Upload Logo'),
+                                  ],
                                 ),
                               ],
                             ),
@@ -360,9 +414,14 @@ class _SettingsPageState extends State<SettingsPage> {
                       children: [
                         Text(strings.about, style: Theme.of(context).textTheme.titleLarge),
                         const SizedBox(height: 12),
-                        _aboutRow('Version', 'v${store.appVersion}'),
+                        _aboutRow(strings.version, 'v${store.appVersion}'),
                         const SizedBox(height: 8),
-                        _aboutRow('System name', store.systemName),
+                        _aboutRow(strings.systemName, store.systemName),
+                        const SizedBox(height: 12),
+                        Text(
+                          strings.copyrightNotice,
+                          style: TextStyle(color: AppColors.muted, fontSize: 12, height: 1.4),
+                        ),
                       ],
                     ),
                   ),
@@ -419,7 +478,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildPlaceholder(String title) {
+  Widget _buildPlaceholder(String title, AppStrings strings) {
     return ShopPanel(
       child: SizedBox(
         height: 220,
@@ -430,12 +489,12 @@ class _SettingsPageState extends State<SettingsPage> {
               const Icon(Icons.construction, color: AppColors.amber, size: 36),
               const SizedBox(height: 12),
               Text(
-                '$title coming soon',
+                strings.comingSoon.replaceAll('{title}', title),
                 style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w700, fontSize: 16),
               ),
               const SizedBox(height: 6),
               Text(
-                'This section is reserved for upcoming Shop X configuration options.',
+                strings.comingSoonBody,
                 style: TextStyle(color: AppColors.muted),
                 textAlign: TextAlign.center,
               ),

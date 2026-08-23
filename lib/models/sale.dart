@@ -177,6 +177,7 @@ class ReportStats {
   final double averageSale;
   final List<TopProduct> topProducts;
   final List<PaymentBreakdown> payments;
+  final List<DailySalesPoint> dailyTrend;
 
   const ReportStats({
     this.totalRevenue = 0,
@@ -185,6 +186,19 @@ class ReportStats {
     this.averageSale = 0,
     this.topProducts = const [],
     this.payments = const [],
+    this.dailyTrend = const [],
+  });
+}
+
+class DailySalesPoint {
+  final DateTime date;
+  final double revenue;
+  final int transactions;
+
+  const DailySalesPoint({
+    required this.date,
+    this.revenue = 0,
+    this.transactions = 0,
   });
 }
 

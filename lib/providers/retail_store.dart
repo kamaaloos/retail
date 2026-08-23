@@ -1,13 +1,16 @@
 import 'package:flutter/foundation.dart' show ChangeNotifier;
 
+import '../data/product_images.dart';
 import '../data/repositories/product_repository.dart';
 import '../data/repositories/purchase_repository.dart';
 import '../data/repositories/sale_repository.dart';
+import '../data/repositories/settings_repository.dart';
 import '../data/repositories/staff_repository.dart';
 import '../models/cart_item.dart';
 import '../models/category.dart';
 import '../models/product.dart';
 import '../models/sale.dart';
+import '../models/settings_config.dart';
 import '../models/staff.dart';
 
 /// Offline app state for Shop X POS.
@@ -17,15 +20,18 @@ class RetailStore extends ChangeNotifier {
     SaleRepository? sales,
     PurchaseRepository? purchases,
     StaffRepository? staff,
+    SettingsRepository? settings,
   })  : _products = products ?? ProductRepository(),
         _sales = sales ?? SaleRepository(),
         _purchases = purchases ?? PurchaseRepository(),
-        _staff = staff ?? StaffRepository();
+        _staff = staff ?? StaffRepository(),
+        _settings = settings ?? SettingsRepository();
 
   final ProductRepository _products;
   final SaleRepository _sales;
   final PurchaseRepository _purchases;
   final StaffRepository _staff;
+  final SettingsRepository _settings;
 
   List<Product> productList = [];
   List<Category> categories = [];
@@ -41,6 +47,8 @@ class RetailStore extends ChangeNotifier {
   Shift? activeShift;
   ShiftSummary? activeShiftSummary;
   Employee? currentEmployee;
+  Employee? loggedInEmployee;
+  bool isLoggedIn = false;
   final List<CartItem> cart = [];
 
   bool loading = true;
@@ -58,9 +66,25 @@ class RetailStore extends ChangeNotifier {
   String taxType = 'exclusive';
   String language = 'en_US';
   bool darkMode = true;
-  String systemName = 'Shop X';
+  String systemName = 'MayleSoft retail';
   String appVersion = '1.0.0';
   String receiptPrefix = 'R';
+  String storeLogoPath = '';
+  List<DiscountRule> discountRules = [];
+  List<PaymentMethodConfig> paymentMethods = [];
+  List<PosDevice> posDevices = [];
+  List<PrinterConfig> printers = [];
+  NetworkSettings networkSettings = const NetworkSettings();
+
+  List<PaymentMethodConfig> get enabledPaymentMethods =>
+      paymentMethods.where((m) => m.enabled).toList();
+
+  String paymentLabel(String code) {
+    for (final method in paymentMethods) {
+      if (method.code == code) return method.label;
+    }
+    return code;
+  }
 
   Future<void> load() async {
     loading = true;
@@ -68,6 +92,7 @@ class RetailStore extends ChangeNotifier {
     notifyListeners();
     try {
       await _loadSettings();
+      await _loadConfigSettings();
       await _reloadAll();
     } catch (e) {
       error = e.toString();
@@ -94,9 +119,24 @@ class RetailStore extends ChangeNotifier {
     taxType = get('tax_type', 'exclusive');
     language = get('language', 'en_US');
     darkMode = get('dark_mode', '1') == '1';
-    systemName = get('system_name', 'Shop X');
+    systemName = get('system_name', 'MayleSoft retail');
     appVersion = get('app_version', '1.0.0');
     receiptPrefix = get('receipt_prefix', 'R');
+    storeLogoPath = get('store_logo');
+  }
+
+  Future<void> _loadConfigSettings() async {
+    discountRules = await _settings.getDiscounts();
+    paymentMethods = await _settings.getPaymentMethods();
+    posDevices = await _settings.getPosDevices();
+    printers = await _settings.getPrinters();
+    networkSettings = await _settings.getNetworkSettings();
+  }
+
+  Future<void> refreshConfigSettings() async {
+    await _loadConfigSettings();
+    _recalculateCartDiscounts();
+    notifyListeners();
   }
 
   Future<void> saveSettings({
@@ -113,7 +153,18 @@ class RetailStore extends ChangeNotifier {
     required String taxType,
     required String language,
     required bool darkMode,
+    String? pickedStoreLogoSource,
+    bool clearStoreLogo = false,
   }) async {
+    var logoPath = storeLogoPath;
+    if (clearStoreLogo) {
+      await StoreLogoStore.deleteIfExists(logoPath);
+      logoPath = '';
+    } else if (pickedStoreLogoSource != null) {
+      await StoreLogoStore.deleteIfExists(logoPath);
+      logoPath = await StoreLogoStore.saveFromPath(pickedStoreLogoSource);
+    }
+
     final map = {
       'store_name': storeName,
       'phone': phone,
@@ -128,6 +179,7 @@ class RetailStore extends ChangeNotifier {
       'tax_type': taxType,
       'language': language,
       'dark_mode': darkMode ? '1' : '0',
+      'store_logo': logoPath,
     };
     await _products.saveSettings(map);
     await _loadSettings();
@@ -163,7 +215,6 @@ class RetailStore extends ChangeNotifier {
     } else {
       activeShiftSummary = null;
     }
-    currentEmployee ??= employees.isEmpty ? null : employees.first;
     final now = DateTime.now();
     reportStats = await _sales.reportStats(
       from: DateTime(now.year, now.month, 1),
@@ -233,6 +284,7 @@ class RetailStore extends ChangeNotifier {
     } else {
       cart.add(CartItem(product: product, quantity: qty));
     }
+    _recalculateCartDiscounts();
     notifyListeners();
   }
 
@@ -247,6 +299,7 @@ class RetailStore extends ChangeNotifier {
         }
       }
     }
+    _recalculateCartDiscounts();
     notifyListeners();
   }
 
@@ -254,6 +307,20 @@ class RetailStore extends ChangeNotifier {
     cart.clear();
     notifyListeners();
   }
+
+  void _recalculateCartDiscounts() {
+    final now = DateTime.now();
+    for (final item in cart) {
+      item.discount = bestLineDiscount(
+        productId: item.product.id,
+        lineSubtotal: item.lineSubtotal,
+        rules: discountRules,
+        when: now,
+      );
+    }
+  }
+
+  double get cartDiscountTotal => cart.fold(0.0, (sum, item) => sum + item.discount);
 
   double get cartSubtotal =>
       cart.fold(0.0, (sum, item) => sum + item.lineSubtotal - item.discount);
@@ -342,20 +409,50 @@ class RetailStore extends ChangeNotifier {
 
   // --- Staff ---
 
+  Future<bool> login({required String username, required String pin}) async {
+    final employee = await _staff.authenticate(username: username, pin: pin);
+    if (employee == null) return false;
+    loggedInEmployee = employee;
+    currentEmployee = employee;
+    isLoggedIn = true;
+    notifyListeners();
+    return true;
+  }
+
+  void logout() {
+    loggedInEmployee = null;
+    currentEmployee = null;
+    isLoggedIn = false;
+    cart.clear();
+    notifyListeners();
+  }
+
   void setCurrentEmployee(Employee employee) {
     currentEmployee = employee;
     notifyListeners();
   }
 
-  Future<void> addEmployee(Employee employee) async {
-    await _staff.insert(employee);
+  Future<void> addEmployee(Employee employee, {String? pin}) async {
+    await _staff.insert(employee, pin: pin);
     employees = await _staff.getAll();
     notifyListeners();
   }
 
-  Future<void> updateEmployee(Employee employee) async {
-    await _staff.update(employee);
+  Future<void> updateEmployee(Employee employee, {String? pin}) async {
+    await _staff.update(employee, pin: pin);
     employees = await _staff.getAll();
+    if (currentEmployee?.id == employee.id) {
+      currentEmployee = employees.firstWhere(
+        (e) => e.id == employee.id,
+        orElse: () => currentEmployee!,
+      );
+    }
+    if (loggedInEmployee?.id == employee.id) {
+      loggedInEmployee = employees.firstWhere(
+        (e) => e.id == employee.id,
+        orElse: () => loggedInEmployee!,
+      );
+    }
     notifyListeners();
   }
 
@@ -406,4 +503,95 @@ class RetailStore extends ChangeNotifier {
     reportStats = await _sales.reportStats(from: from, to: to);
     notifyListeners();
   }
+
+  // --- Discounts ---
+
+  Future<void> addDiscount(DiscountRule rule) async {
+    await _settings.insertDiscount(rule);
+    await refreshConfigSettings();
+  }
+
+  Future<void> updateDiscount(DiscountRule rule) async {
+    await _settings.updateDiscount(rule);
+    await refreshConfigSettings();
+  }
+
+  Future<void> deleteDiscount(int id) async {
+    await _settings.deleteDiscount(id);
+    await refreshConfigSettings();
+  }
+
+  // --- Payment methods ---
+
+  Future<void> addPaymentMethod(PaymentMethodConfig method) async {
+    await _settings.insertPaymentMethod(method);
+    await refreshConfigSettings();
+  }
+
+  Future<void> updatePaymentMethod(PaymentMethodConfig method) async {
+    await _settings.updatePaymentMethod(method);
+    await refreshConfigSettings();
+  }
+
+  Future<void> deletePaymentMethod(int id) async {
+    await _settings.deletePaymentMethod(id);
+    await refreshConfigSettings();
+  }
+
+  // --- POS devices ---
+
+  Future<void> addPosDevice(PosDevice device) async {
+    await _settings.insertPosDevice(device);
+    await refreshConfigSettings();
+  }
+
+  Future<void> updatePosDevice(PosDevice device) async {
+    await _settings.updatePosDevice(device);
+    await refreshConfigSettings();
+  }
+
+  Future<void> deletePosDevice(int id) async {
+    await _settings.deletePosDevice(id);
+    await refreshConfigSettings();
+  }
+
+  // --- Printers ---
+
+  Future<void> addPrinter(PrinterConfig printer) async {
+    await _settings.insertPrinter(printer);
+    await refreshConfigSettings();
+  }
+
+  Future<void> updatePrinter(PrinterConfig printer) async {
+    await _settings.updatePrinter(printer);
+    await refreshConfigSettings();
+  }
+
+  Future<void> deletePrinter(int id) async {
+    await _settings.deletePrinter(id);
+    await refreshConfigSettings();
+  }
+
+  // --- Network ---
+
+  Future<void> saveNetworkSettings(NetworkSettings settings) async {
+    await _settings.saveNetworkSettings(settings);
+    networkSettings = settings;
+    notifyListeners();
+  }
+
+  // --- Backup ---
+
+  Future<String> exportBackup(String destinationPath) => _settings.exportDatabase(destinationPath);
+
+  Future<void> restoreBackup(String sourcePath) async {
+    await _settings.restoreDatabase(sourcePath);
+    await load();
+  }
+
+  String suggestedBackupName() => _settings.suggestedBackupName();
+
+  String get databaseDirectory => _settings.databaseDirectory;
+
+  String get databasePath => _settings.databasePath;
 }

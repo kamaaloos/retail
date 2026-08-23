@@ -1,11 +1,11 @@
 {
-    "name": "retail",
-    "short_name": "retail",
+    "name": "MayleSoft retail",
+    "short_name": "MayleSoft retail",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F8FAFC",
+    "theme_color": "#3B82F6",
+    "description": "MayleSoft retail — offline POS and inventory manager.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
