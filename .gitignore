@@ -1,0 +1,108 @@
+# ── Miscellaneous ────────────────────────────────────────────────────────────
+*.class
+*.log
+*.pyc
+*.pyo
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# ── IDEs / editors ───────────────────────────────────────────────────────────
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+*.code-workspace
+.cursor/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ── Flutter / Dart / Pub ─────────────────────────────────────────────────────
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+.flutter/
+/build/
+/coverage/
+.widget_preview/
+
+# Symbolication / obfuscation artifacts
+app.*.symbols
+app.*.map.json
+
+# ── Platform ephemeral / generated ───────────────────────────────────────────
+**/flutter/ephemeral/
+**/Flutter/ephemeral/
+linux/flutter/ephemeral/
+macos/Flutter/ephemeral/
+windows/flutter/ephemeral/
+
+# ── Android ──────────────────────────────────────────────────────────────────
+/android/app/debug
+/android/app/profile
+/android/app/release
+/android/.gradle/
+/android/local.properties
+/android/**/GeneratedPluginRegistrant.java
+/android/**/.cxx/
+# Signing secrets — never upload
+**/android/key.properties
+**/*.jks
+**/*.keystore
+**/*.p12
+
+# ── iOS / macOS ──────────────────────────────────────────────────────────────
+**/Pods/
+**/DerivedData/
+**/xcuserdata/
+**/*.xcuserstate
+**/Flutter/Generated.xcconfig
+**/Flutter/flutter_export_environment.sh
+**/ServiceDefinitions.json
+**/Runner/GeneratedPluginRegistrant.*
+
+# ── Secrets & local env ──────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.p8
+credentials.json
+secrets.json
+google-services.json
+GoogleService-Info.plist
+
+# ── Local app / DB data (offline POS) ────────────────────────────────────────
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+**/product_images/
+
+# ── OS / tooling noise ───────────────────────────────────────────────────────
+*.tmp
+*.temp
+*.bak
+*.orig
+*.exe~
+*.stackdump
+.fvm/
+.fvmrc

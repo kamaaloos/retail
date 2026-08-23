@@ -1,0 +1,206 @@
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  color TEXT NOT NULL DEFAULT '#3B82F6',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS products (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sku TEXT NOT NULL UNIQUE,
+  barcode TEXT UNIQUE,
+  name TEXT NOT NULL,
+  category_id INTEGER,
+  unit TEXT NOT NULL DEFAULT 'pcs',
+  color TEXT NOT NULL DEFAULT '#3B82F6',
+  image_path TEXT,
+  cost_price NUMERIC NOT NULL DEFAULT 0,
+  selling_price NUMERIC NOT NULL DEFAULT 0,
+  tax_rate NUMERIC NOT NULL DEFAULT 0,
+  reorder_level NUMERIC NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+CREATE TABLE IF NOT EXISTS suppliers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  phone TEXT,
+  email TEXT,
+  address TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS customers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  phone TEXT,
+  email TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS employees (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  username TEXT UNIQUE,
+  pin_hash TEXT,
+  role TEXT NOT NULL DEFAULT 'cashier',
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS purchases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  supplier_id INTEGER,
+  invoice_number TEXT,
+  purchase_date TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  subtotal NUMERIC NOT NULL DEFAULT 0,
+  tax NUMERIC NOT NULL DEFAULT 0,
+  total NUMERIC NOT NULL DEFAULT 0,
+  notes TEXT,
+  FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+);
+
+CREATE TABLE IF NOT EXISTS purchase_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  purchase_id INTEGER NOT NULL,
+  product_id INTEGER NOT NULL,
+  quantity NUMERIC NOT NULL,
+  unit_cost NUMERIC NOT NULL,
+  line_total NUMERIC NOT NULL,
+  FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE TABLE IF NOT EXISTS sales (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  receipt_number TEXT NOT NULL UNIQUE,
+  customer_id INTEGER,
+  employee_id INTEGER,
+  sold_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  subtotal NUMERIC NOT NULL DEFAULT 0,
+  discount NUMERIC NOT NULL DEFAULT 0,
+  tax NUMERIC NOT NULL DEFAULT 0,
+  total NUMERIC NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'completed',
+  FOREIGN KEY (customer_id) REFERENCES customers(id),
+  FOREIGN KEY (employee_id) REFERENCES employees(id)
+);
+
+CREATE TABLE IF NOT EXISTS sale_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sale_id INTEGER NOT NULL,
+  product_id INTEGER NOT NULL,
+  quantity NUMERIC NOT NULL,
+  unit_price NUMERIC NOT NULL,
+  unit_cost NUMERIC NOT NULL,
+  discount NUMERIC NOT NULL DEFAULT 0,
+  tax NUMERIC NOT NULL DEFAULT 0,
+  line_total NUMERIC NOT NULL,
+  FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sale_id INTEGER NOT NULL,
+  method TEXT NOT NULL,
+  amount NUMERIC NOT NULL,
+  paid_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS returns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sale_id INTEGER,
+  employee_id INTEGER,
+  returned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  total NUMERIC NOT NULL DEFAULT 0,
+  reason TEXT,
+  FOREIGN KEY (sale_id) REFERENCES sales(id),
+  FOREIGN KEY (employee_id) REFERENCES employees(id)
+);
+
+CREATE TABLE IF NOT EXISTS return_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  return_id INTEGER NOT NULL,
+  product_id INTEGER NOT NULL,
+  quantity NUMERIC NOT NULL,
+  unit_price NUMERIC NOT NULL,
+  line_total NUMERIC NOT NULL,
+  FOREIGN KEY (return_id) REFERENCES returns(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE TABLE IF NOT EXISTS stock_movements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id INTEGER NOT NULL,
+  movement_type TEXT NOT NULL,
+  quantity NUMERIC NOT NULL,
+  reference_type TEXT,
+  reference_id INTEGER,
+  unit_cost NUMERIC,
+  notes TEXT,
+  employee_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (product_id) REFERENCES products(id),
+  FOREIGN KEY (employee_id) REFERENCES employees(id)
+);
+
+CREATE TABLE IF NOT EXISTS shifts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  employee_id INTEGER NOT NULL,
+  opened_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  closed_at TEXT,
+  opening_cash NUMERIC NOT NULL DEFAULT 0,
+  closing_cash NUMERIC,
+  expected_cash NUMERIC,
+  difference NUMERIC,
+  status TEXT NOT NULL DEFAULT 'open',
+  FOREIGN KEY (employee_id) REFERENCES employees(id)
+);
+
+CREATE TABLE IF NOT EXISTS cash_movements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shift_id INTEGER NOT NULL,
+  movement_type TEXT NOT NULL,
+  amount NUMERIC NOT NULL,
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (shift_id) REFERENCES shifts(id)
+);
+
+CREATE TABLE IF NOT EXISTS expenses (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category TEXT NOT NULL,
+  amount NUMERIC NOT NULL,
+  description TEXT,
+  expense_date TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  employee_id INTEGER,
+  action TEXT NOT NULL,
+  entity_type TEXT,
+  entity_id INTEGER,
+  details TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (employee_id) REFERENCES employees(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
+CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements(product_id);
+CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(sold_at);
+CREATE INDEX IF NOT EXISTS idx_purchase_date ON purchases(purchase_date);
+CREATE INDEX IF NOT EXISTS idx_sales_employee ON sales(employee_id);
