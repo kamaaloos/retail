@@ -1,0 +1,5 @@
+﻿{
+  "version": "0.1.0",
+  "platform": "windows",
+  "notes": "Place MayleSoftRetail-Setup-*.exe in site/dist and update downloadUrl when publishing."
+}
