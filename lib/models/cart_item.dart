@@ -21,4 +21,10 @@ class CartItem {
   }
 
   double get lineTotal => (lineSubtotal - discount) + taxAmount;
+
+  CartItem copy() => CartItem(
+        product: product,
+        quantity: quantity,
+        discount: discount,
+      );
 }

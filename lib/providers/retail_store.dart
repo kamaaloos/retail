@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart' show ChangeNotifier;
 
+import '../app_info.dart';
 import '../data/product_images.dart';
+import '../data/repositories/customer_repository.dart';
+import '../data/repositories/held_cart_repository.dart';
 import '../data/repositories/product_repository.dart';
 import '../data/repositories/purchase_repository.dart';
 import '../data/repositories/sale_repository.dart';
@@ -8,10 +11,15 @@ import '../data/repositories/settings_repository.dart';
 import '../data/repositories/staff_repository.dart';
 import '../models/cart_item.dart';
 import '../models/category.dart';
+import '../models/customer.dart';
+import '../models/held_cart.dart';
+import '../models/insufficient_stock.dart';
 import '../models/product.dart';
 import '../models/sale.dart';
 import '../models/settings_config.dart';
 import '../models/staff.dart';
+import '../services/receipt_printer.dart';
+import '../l10n/app_strings.dart';
 
 /// Offline app state for Shop X POS.
 class RetailStore extends ChangeNotifier {
@@ -21,17 +29,23 @@ class RetailStore extends ChangeNotifier {
     PurchaseRepository? purchases,
     StaffRepository? staff,
     SettingsRepository? settings,
+    CustomerRepository? customers,
+    HeldCartRepository? heldCartsRepo,
   })  : _products = products ?? ProductRepository(),
         _sales = sales ?? SaleRepository(),
         _purchases = purchases ?? PurchaseRepository(),
         _staff = staff ?? StaffRepository(),
-        _settings = settings ?? SettingsRepository();
+        _settings = settings ?? SettingsRepository(),
+        _customers = customers ?? CustomerRepository(),
+        _heldCartsRepo = heldCartsRepo ?? HeldCartRepository();
 
   final ProductRepository _products;
   final SaleRepository _sales;
   final PurchaseRepository _purchases;
   final StaffRepository _staff;
   final SettingsRepository _settings;
+  final CustomerRepository _customers;
+  final HeldCartRepository _heldCartsRepo;
 
   List<Product> productList = [];
   List<Category> categories = [];
@@ -49,7 +63,13 @@ class RetailStore extends ChangeNotifier {
   Employee? currentEmployee;
   Employee? loggedInEmployee;
   bool isLoggedIn = false;
+  /// True after login when the PIN is still the factory default `1234`.
+  bool requiresPinChange = false;
   final List<CartItem> cart = [];
+  final List<HeldCart> heldCarts = [];
+  List<Customer> customers = [];
+  Customer? selectedCustomer;
+  int _heldCartSeq = 0;
 
   bool loading = true;
   String? error;
@@ -120,9 +140,11 @@ class RetailStore extends ChangeNotifier {
     language = get('language', 'en_US');
     darkMode = get('dark_mode', '1') == '1';
     systemName = get('system_name', 'MayleSoft retail');
-    appVersion = get('app_version', '1.0.0');
+    appVersion = AppInfo.version;
     receiptPrefix = get('receipt_prefix', 'R');
     storeLogoPath = get('store_logo');
+    // Keep DB setting aligned with the shipping build for receipts / about.
+    await _products.saveSettings({'app_version': AppInfo.version});
   }
 
   Future<void> _loadConfigSettings() async {
@@ -208,6 +230,19 @@ class RetailStore extends ChangeNotifier {
     shiftHistory = await _staff.shiftHistory();
     stockHistory = await _products.stockHistory();
     lowStockProducts = await _products.lowStockProducts();
+    customers = await _customers.getAll();
+    heldCarts
+      ..clear()
+      ..addAll(await _heldCartsRepo.listAll());
+    if (heldCarts.isNotEmpty) {
+      final maxSeq = heldCarts
+          .map((h) {
+            final m = RegExp(r'#(\d+)$').firstMatch(h.label);
+            return int.tryParse(m?.group(1) ?? '') ?? 0;
+          })
+          .fold(0, (a, b) => a > b ? a : b);
+      if (maxSeq > _heldCartSeq) _heldCartSeq = maxSeq;
+    }
     stats = await _sales.todayStats();
     activeShift = await _staff.currentOpenShift();
     if (activeShift?.id != null) {
@@ -277,10 +312,23 @@ class RetailStore extends ChangeNotifier {
 
   // --- Cart / POS ---
 
+  void _ensureQtyFitsStock(Product product, double requestedQty) {
+    final available = product.stockOnHand < 0 ? 0.0 : product.stockOnHand;
+    if (requestedQty > available + 0.0001) {
+      throw InsufficientStockException(
+        productName: product.name,
+        requested: requestedQty,
+        available: available,
+      );
+    }
+  }
+
   void addToCart(Product product, {double qty = 1}) {
     final existing = cart.where((c) => c.product.id == product.id).toList();
+    final nextQty = (existing.isEmpty ? 0.0 : existing.first.quantity) + qty;
+    _ensureQtyFitsStock(product, nextQty);
     if (existing.isNotEmpty) {
-      existing.first.quantity += qty;
+      existing.first.quantity = nextQty;
     } else {
       cart.add(CartItem(product: product, quantity: qty));
     }
@@ -294,6 +342,7 @@ class RetailStore extends ChangeNotifier {
     } else {
       for (final item in cart) {
         if (item.product.id == productId) {
+          _ensureQtyFitsStock(item.product, qty);
           item.quantity = qty;
           break;
         }
@@ -303,8 +352,104 @@ class RetailStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Live stock check. Throws [InsufficientStockException] if any line exceeds on-hand qty.
+  Future<void> assertCartHasStock() async {
+    for (final item in cart) {
+      final id = item.product.id;
+      if (id == null) continue;
+      final live = await _products.getById(id);
+      final available = live?.stockOnHand ?? 0;
+      if (item.quantity > available + 0.0001) {
+        throw InsufficientStockException(
+          productName: item.product.name,
+          requested: item.quantity,
+          available: available < 0 ? 0 : available,
+        );
+      }
+    }
+  }
+
   void clearCart() {
     cart.clear();
+    selectedCustomer = null;
+    notifyListeners();
+  }
+
+  void selectCustomer(Customer? customer) {
+    selectedCustomer = customer;
+    notifyListeners();
+  }
+
+  Future<void> addCustomer(Customer customer) async {
+    await _customers.insert(customer);
+    customers = await _customers.getAll();
+    notifyListeners();
+  }
+
+  Future<void> updateCustomer(Customer customer) async {
+    await _customers.update(customer);
+    customers = await _customers.getAll();
+    if (selectedCustomer?.id == customer.id) {
+      selectedCustomer = customers.where((c) => c.id == customer.id).firstOrNull ?? customer;
+    }
+    notifyListeners();
+  }
+
+  Future<void> deleteCustomer(int id) async {
+    await _customers.delete(id);
+    customers = await _customers.getAll();
+    if (selectedCustomer?.id == id) selectedCustomer = null;
+    notifyListeners();
+  }
+
+  /// Park the current cart so another customer can be served.
+  Future<HeldCart> holdCurrentCart({String? note}) async {
+    if (cart.isEmpty) {
+      throw StateError('Cart is empty');
+    }
+    _heldCartSeq += 1;
+    final label = (note == null || note.trim().isEmpty)
+        ? 'Hold #$_heldCartSeq'
+        : note.trim();
+    final held = await _heldCartsRepo.insert(
+      label: label,
+      items: cart.map((item) => item.copy()).toList(),
+      employeeId: currentEmployee?.id ?? loggedInEmployee?.id,
+    );
+    heldCarts.insert(0, held);
+    cart.clear();
+    selectedCustomer = null;
+    notifyListeners();
+    return held;
+  }
+
+  /// Restore a held cart. If the current cart has items, it is parked first.
+  Future<HeldCart?> resumeHeldCart(String id, {bool holdCurrentIfNeeded = true}) async {
+    final index = heldCarts.indexWhere((h) => h.id == id);
+    if (index < 0) return null;
+
+    HeldCart? parkedCurrent;
+    if (cart.isNotEmpty && holdCurrentIfNeeded) {
+      parkedCurrent = await holdCurrentCart();
+    } else {
+      cart.clear();
+      selectedCustomer = null;
+    }
+
+    // Re-find after possible re-insert from holdCurrentCart.
+    final resumeIndex = heldCarts.indexWhere((h) => h.id == id);
+    if (resumeIndex < 0) return parkedCurrent;
+    final held = heldCarts.removeAt(resumeIndex);
+    await _heldCartsRepo.delete(id);
+    cart.addAll(held.items.map((item) => item.copy()));
+    _recalculateCartDiscounts();
+    notifyListeners();
+    return parkedCurrent;
+  }
+
+  Future<void> discardHeldCart(String id) async {
+    await _heldCartsRepo.delete(id);
+    heldCarts.removeWhere((h) => h.id == id);
     notifyListeners();
   }
 
@@ -331,19 +476,38 @@ class RetailStore extends ChangeNotifier {
 
   int get cartCount => cart.fold(0, (sum, item) => sum + item.quantity.ceil());
 
-  Future<Sale> checkout({String paymentMethod = 'cash'}) async {
+  Future<Sale> checkout({
+    String paymentMethod = 'cash',
+    List<({String method, double amount})>? payments,
+    double? chargedTotal,
+    int? customerId,
+  }) async {
+    if (activeShift == null) {
+      throw StateError('Open a shift before selling');
+    }
+    await assertCartHasStock();
     final sale = await _sales.checkout(
       items: List.from(cart),
       paymentMethod: paymentMethod,
+      payments: payments,
       employeeId: currentEmployee?.id ?? activeShift?.employeeId ?? 1,
+      customerId: customerId ?? selectedCustomer?.id,
+      chargedTotal: chargedTotal,
     );
-    clearCart();
+    cart.clear();
+    selectedCustomer = null;
     recentSales = await _sales.recent();
     filteredSales = recentSales;
-    await refreshProducts();
+    productList = await _products.getAll();
+    categories = await _products.getCategories();
+    lowStockProducts = await _products.lowStockProducts();
+    stats = await _sales.todayStats();
+    stockHistory = await _products.stockHistory();
     if (activeShift?.id != null) {
       activeShiftSummary = await _staff.shiftSummary(activeShift!.id!);
     }
+    // Single notify after checkout so MaterialApp/dialogs aren't rebuilt mid-flight.
+    notifyListeners();
     return sale;
   }
 
@@ -415,15 +579,47 @@ class RetailStore extends ChangeNotifier {
     loggedInEmployee = employee;
     currentEmployee = employee;
     isLoggedIn = true;
+    requiresPinChange = pin.trim() == '1234';
     notifyListeners();
     return true;
+  }
+
+  /// Replace the signed-in user's PIN. Rejects the factory default `1234`.
+  Future<void> changeOwnPin({
+    required String currentPin,
+    required String newPin,
+  }) async {
+    final employee = loggedInEmployee;
+    if (employee?.id == null) throw Exception('not_logged_in');
+    final normalizedNew = newPin.trim();
+    final normalizedCurrent = currentPin.trim();
+    if (normalizedNew.length < 4) throw Exception('pin_too_short');
+    if (normalizedNew == '1234') throw Exception('pin_is_default');
+    final fresh = await _staff.authenticate(
+      username: employee!.username ?? '',
+      pin: normalizedCurrent,
+    );
+    if (fresh == null || fresh.id != employee.id) {
+      throw Exception('wrong_current_pin');
+    }
+    await _staff.update(employee, pin: normalizedNew);
+    employees = await _staff.getAll();
+    loggedInEmployee = employees.firstWhere(
+      (e) => e.id == employee.id,
+      orElse: () => employee,
+    );
+    currentEmployee = loggedInEmployee;
+    requiresPinChange = false;
+    notifyListeners();
   }
 
   void logout() {
     loggedInEmployee = null;
     currentEmployee = null;
     isLoggedIn = false;
+    requiresPinChange = false;
     cart.clear();
+    selectedCustomer = null;
     notifyListeners();
   }
 
@@ -485,14 +681,17 @@ class RetailStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> closeShift({required double closingCash}) async {
+  Future<ShiftSummary> closeShift({required double closingCash}) async {
     final shift = activeShift;
     if (shift?.id == null) throw StateError('No open shift');
-    await _staff.closeShift(shiftId: shift!.id!, closingCash: closingCash);
+    final shiftId = shift!.id!;
+    await _staff.closeShift(shiftId: shiftId, closingCash: closingCash);
+    final summary = await _staff.shiftSummary(shiftId);
     activeShift = await _staff.currentOpenShift();
     activeShiftSummary = null;
     shiftHistory = await _staff.shiftHistory();
     notifyListeners();
+    return summary;
   }
 
   Future<ShiftSummary> getShiftSummary(int shiftId) => _staff.shiftSummary(shiftId);
@@ -570,6 +769,66 @@ class RetailStore extends ChangeNotifier {
   Future<void> deletePrinter(int id) async {
     await _settings.deletePrinter(id);
     await refreshConfigSettings();
+  }
+
+  ReceiptStoreInfo get receiptStoreInfo => ReceiptStoreInfo(
+        storeName: storeName,
+        phone: phone,
+        email: email,
+        address: address,
+        receiptHeader: receiptHeader,
+        receiptFooter: receiptFooter,
+        currencySymbol: currencySymbol,
+        taxName: taxName,
+        logoPath: storeLogoPath.isEmpty ? null : storeLogoPath,
+      );
+
+  Future<void> printSaleReceipt(
+    SaleDetail detail, {
+    double? amountReceived,
+    double? change,
+    bool forceDialog = false,
+  }) {
+    final t = AppStrings.of(language);
+    return ReceiptPrinter.printSale(
+      detail: detail,
+      store: receiptStoreInfo,
+      t: t,
+      paymentLabel: paymentLabel,
+      printers: printers,
+      options: ReceiptPrintOptions(
+        amountReceived: amountReceived,
+        change: change,
+        forceDialog: forceDialog,
+        paperWidthMm: ReceiptPrinter.defaultPrinter(printers)?.paperWidth ?? 80,
+      ),
+    );
+  }
+
+  Future<void> printTestReceipt({PrinterConfig? printer}) {
+    final t = AppStrings.of(language);
+    return ReceiptPrinter.printTest(
+      store: receiptStoreInfo,
+      t: t,
+      printer: printer ?? ReceiptPrinter.defaultPrinter(printers),
+    );
+  }
+
+  Future<void> printZReport(
+    ShiftSummary summary, {
+    double? countedCash,
+    bool forceDialog = false,
+  }) {
+    final t = AppStrings.of(language);
+    return ReceiptPrinter.printZReport(
+      summary: summary,
+      store: receiptStoreInfo,
+      t: t,
+      paymentLabel: paymentLabel,
+      printers: printers,
+      countedCash: countedCash,
+      forceDialog: forceDialog,
+    );
   }
 
   // --- Network ---

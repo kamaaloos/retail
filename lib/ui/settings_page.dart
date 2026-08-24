@@ -2,8 +2,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../app_info.dart';
 import '../l10n/app_strings.dart';
 import '../providers/retail_store.dart';
+import '../services/app_update.dart';
 import 'theme.dart';
 import 'widgets.dart';
 import 'settings_tabs.dart';
@@ -37,6 +39,7 @@ class _SettingsPageState extends State<SettingsPage> {
   String? _pickedLogoSource;
   bool _clearLogo = false;
   bool _savingLogo = false;
+  bool _checkingUpdate = false;
 
   @override
   void initState() {
@@ -414,9 +417,24 @@ class _SettingsPageState extends State<SettingsPage> {
                       children: [
                         Text(strings.about, style: Theme.of(context).textTheme.titleLarge),
                         const SizedBox(height: 12),
-                        _aboutRow(strings.version, 'v${store.appVersion}'),
+                        _aboutRow(strings.version, AppInfo.versionLabel),
                         const SizedBox(height: 8),
                         _aboutRow(strings.systemName, store.systemName),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _checkingUpdate ? null : _checkForUpdates,
+                            icon: _checkingUpdate
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.system_update_alt, size: 18),
+                            label: Text(strings.checkForUpdates),
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           strings.copyrightNotice,
@@ -476,6 +494,64 @@ class _SettingsPageState extends State<SettingsPage> {
         Text(value, style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w600)),
       ],
     );
+  }
+
+  Future<void> _checkForUpdates() async {
+    final strings = AppStrings.of(context.read<RetailStore>().language);
+    setState(() => _checkingUpdate = true);
+    final result = await AppUpdateService.check();
+    if (!mounted) return;
+    setState(() => _checkingUpdate = false);
+
+    switch (result.status) {
+      case UpdateCheckStatus.upToDate:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(strings.updateUpToDate)),
+        );
+      case UpdateCheckStatus.unreachable:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              strings.updateCheckFailed.replaceAll('{error}', result.error ?? ''),
+            ),
+            backgroundColor: AppColors.red,
+          ),
+        );
+      case UpdateCheckStatus.updateAvailable:
+        final remote = result.remote!;
+        final download = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(strings.updateAvailableTitle),
+            content: Text(
+              strings.updateAvailableBody
+                  .replaceAll('{version}', remote.version)
+                  .replaceAll('{build}', '${remote.build}')
+                  .replaceAll('{notes}', remote.notes?.trim().isNotEmpty == true ? remote.notes! : '—'),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(strings.cancel)),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(strings.downloadUpdate),
+              ),
+            ],
+          ),
+        );
+        if (download == true) {
+          try {
+            await AppUpdateService.openDownload(remote.downloadUrl);
+          } catch (e) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(strings.updateCheckFailed.replaceAll('{error}', '$e')),
+                backgroundColor: AppColors.red,
+              ),
+            );
+          }
+        }
+    }
   }
 
   Widget _buildPlaceholder(String title, AppStrings strings) {

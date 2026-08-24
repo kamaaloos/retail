@@ -8,10 +8,11 @@ enum AppPage {
   categories(3, Icons.category_outlined, Icons.category),
   salesHistory(4, Icons.receipt_long_outlined, Icons.receipt_long),
   inventory(5, Icons.warehouse_outlined, Icons.warehouse),
-  staff(6, Icons.groups_outlined, Icons.groups),
-  shifts(7, Icons.schedule_outlined, Icons.schedule),
-  reports(8, Icons.assessment_outlined, Icons.assessment),
-  settings(9, Icons.settings_outlined, Icons.settings);
+  customers(6, Icons.person_outline, Icons.person),
+  staff(7, Icons.groups_outlined, Icons.groups),
+  shifts(8, Icons.schedule_outlined, Icons.schedule),
+  reports(9, Icons.assessment_outlined, Icons.assessment),
+  settings(10, Icons.settings_outlined, Icons.settings);
 
   const AppPage(this.navIndex, this.iconOutlined, this.iconFilled);
 
@@ -31,14 +32,18 @@ abstract final class RolePermissions {
   static bool canAccess(String role, AppPage page) {
     switch (role.toLowerCase()) {
       case 'cashier':
-        return page == AppPage.dashboard || page == AppPage.pos;
+        return page == AppPage.dashboard ||
+            page == AppPage.pos ||
+            page == AppPage.shifts;
       case 'manager':
         return page != AppPage.staff && page != AppPage.settings;
       case 'admin':
       case 'owner':
         return true;
       default:
-        return page == AppPage.dashboard || page == AppPage.pos;
+        return page == AppPage.dashboard ||
+            page == AppPage.pos ||
+            page == AppPage.shifts;
     }
   }
 

@@ -54,6 +54,8 @@ class SaleItem {
   final double discount;
   final double tax;
   final double lineTotal;
+  /// Qty already returned for this product on this sale.
+  final double refundedQuantity;
 
   const SaleItem({
     this.id,
@@ -67,7 +69,13 @@ class SaleItem {
     this.discount = 0,
     this.tax = 0,
     required this.lineTotal,
+    this.refundedQuantity = 0,
   });
+
+  double get remainingQuantity {
+    final left = quantity - refundedQuantity;
+    return left > 0 ? left : 0;
+  }
 
   factory SaleItem.fromMap(Map<String, Object?> map) {
     return SaleItem(
@@ -82,6 +90,7 @@ class SaleItem {
       discount: (map['discount'] as num?)?.toDouble() ?? 0,
       tax: (map['tax'] as num?)?.toDouble() ?? 0,
       lineTotal: (map['line_total'] as num?)?.toDouble() ?? 0,
+      refundedQuantity: (map['refunded_qty'] as num?)?.toDouble() ?? 0,
     );
   }
 }

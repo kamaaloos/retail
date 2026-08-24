@@ -112,6 +112,11 @@ class CashMovement {
 class ShiftSummary {
   final Shift shift;
   final double cashSales;
+  final double cardSales;
+  final double otherSales;
+  final double totalSales;
+  final int saleCount;
+  final double refunds;
   final double cashIn;
   final double cashOut;
   final double expectedCash;
@@ -120,6 +125,11 @@ class ShiftSummary {
   const ShiftSummary({
     required this.shift,
     this.cashSales = 0,
+    this.cardSales = 0,
+    this.otherSales = 0,
+    this.totalSales = 0,
+    this.saleCount = 0,
+    this.refunds = 0,
     this.cashIn = 0,
     this.cashOut = 0,
     this.expectedCash = 0,

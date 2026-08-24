@@ -7,6 +7,7 @@ import 'auth/role_permissions.dart';
 import 'data/database.dart';
 import 'l10n/app_strings.dart';
 import 'providers/retail_store.dart';
+import 'ui/change_pin_page.dart';
 import 'ui/login_page.dart';
 import 'ui/pages.dart';
 import 'ui/settings_page.dart';
@@ -38,13 +39,16 @@ class ShopXApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<RetailStore>();
-    final strings = AppStrings.of(store.language);
+    // Only rebuild MaterialApp when locale/theme change — not on every cart/sale
+    // notify (that recreates Navigator GlobalKeys and crashes print/dialogs).
+    final language = context.select((RetailStore s) => s.language);
+    final darkMode = context.select((RetailStore s) => s.darkMode);
+    final strings = AppStrings.of(language);
 
     return MaterialApp(
       title: strings.appName,
       debugShowCheckedModeBanner: false,
-      theme: buildRetailTheme(dark: store.darkMode),
+      theme: buildRetailTheme(dark: darkMode),
       locale: strings.materialLocale,
       supportedLocales: const [
         Locale('en', 'US'),
@@ -73,14 +77,19 @@ class AppRoot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<RetailStore>();
-    if (store.loading) {
+    final loading = context.select((RetailStore s) => s.loading);
+    final loggedIn = context.select((RetailStore s) => s.isLoggedIn);
+    if (loading) {
       return Scaffold(
         body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
       );
     }
-    if (!store.isLoggedIn) {
+    if (!loggedIn) {
       return const LoginPage();
+    }
+    final mustChangePin = context.select((RetailStore s) => s.requiresPinChange);
+    if (mustChangePin) {
+      return const ChangePinPage();
     }
     return const AppShell();
   }
@@ -104,6 +113,7 @@ class _AppShellState extends State<AppShell> {
       AppPage.categories => s.categories,
       AppPage.salesHistory => s.salesHistory,
       AppPage.inventory => s.inventory,
+      AppPage.customers => s.customers,
       AppPage.staff => s.staff,
       AppPage.shifts => s.shifts,
       AppPage.reports => s.reports,
@@ -285,6 +295,8 @@ class _AppShellState extends State<AppShell> {
         return const SalesHistoryPage();
       case AppPage.inventory:
         return const InventoryPage();
+      case AppPage.customers:
+        return const CustomersPage();
       case AppPage.staff:
         return const StaffPage();
       case AppPage.shifts:

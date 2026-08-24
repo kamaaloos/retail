@@ -1,5 +1,11 @@
 ﻿{
   "version": "0.1.0",
+  "build": 1,
   "platform": "windows",
-  "notes": "Place MayleSoftRetail-Setup-*.exe in site/dist and update downloadUrl when publishing."
+  "fileName": "MayleSoftRetail-Setup-0.1.0.exe",
+  "downloadUrl": "https://retail.maylesoft.com/MayleSoftRetail-Setup-0.1.0.exe",
+  "releaseDate": "2026-08-24",
+  "sha256": "",
+  "signed": false,
+  "notes": "MayleSoft retail Windows installer. Replace after running tool/build_windows_installer.ps1."
 }

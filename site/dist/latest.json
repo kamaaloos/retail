@@ -1,0 +1,8 @@
+﻿{
+  "version": "0.1.0",
+  "platform": "windows",
+  "fileName": "MayleSoftRetail-Setup-0.1.0.exe",
+  "downloadUrl": "https://retail.maylesoft.com/MayleSoftRetail-Setup-0.1.0.exe",
+  "releasedAt": "2026-08-23T00:00:00.000Z",
+  "notes": "Initial Windows installer for MayleSoft Retail POS."
+}

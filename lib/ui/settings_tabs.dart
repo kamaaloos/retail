@@ -372,6 +372,23 @@ class SettingsPrintersTab extends StatelessWidget {
     }
   }
 
+  Future<void> _testPrint(BuildContext context, PrinterConfig printer) async {
+    final store = context.read<RetailStore>();
+    final t = AppStrings.of(store.language);
+    try {
+      await store.printTestReceipt(printer: printer);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t.receiptPrinted)),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t.printFailed.replaceAll('{error}', '$e'))),
+      );
+    }
+  }
+
   String _printerTypeLabel(AppStrings t, String type) =>
       type == 'label' ? t.printerTypeLabel : t.printerTypeReceipt;
 
@@ -420,6 +437,8 @@ class SettingsPrintersTab extends StatelessWidget {
                           '${printer.paperWidth}mm',
                         ].join(' · '),
                         trailing: printer.isDefault ? t.defaultPrinter : (printer.active ? t.active : t.inactive),
+                        onTest: () => _testPrint(context, printer),
+                        testTooltip: t.testPrint,
                         onEdit: () => _edit(context, existing: printer),
                         onDelete: () => _delete(context, printer),
                       ),
@@ -698,6 +717,8 @@ class _ConfigListTile extends StatelessWidget {
   final String trailing;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onTest;
+  final String? testTooltip;
 
   const _ConfigListTile({
     required this.title,
@@ -705,6 +726,8 @@ class _ConfigListTile extends StatelessWidget {
     required this.trailing,
     required this.onEdit,
     required this.onDelete,
+    this.onTest,
+    this.testTooltip,
   });
 
   @override
@@ -725,6 +748,12 @@ class _ConfigListTile extends StatelessWidget {
             ),
           ),
           Text(trailing, style: TextStyle(color: AppColors.muted, fontSize: 12)),
+          if (onTest != null)
+            IconButton(
+              tooltip: testTooltip ?? 'Test print',
+              icon: Icon(Icons.print_outlined, color: AppColors.muted, size: 20),
+              onPressed: onTest,
+            ),
           IconButton(
             icon: Icon(Icons.edit_outlined, color: AppColors.muted, size: 20),
             onPressed: onEdit,

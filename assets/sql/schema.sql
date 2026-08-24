@@ -182,6 +182,26 @@ CREATE TABLE IF NOT EXISTS expenses (
   expense_date TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS held_carts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  label TEXT NOT NULL,
+  employee_id INTEGER,
+  held_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (employee_id) REFERENCES employees(id)
+);
+
+CREATE TABLE IF NOT EXISTS held_cart_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  held_cart_id INTEGER NOT NULL,
+  product_id INTEGER NOT NULL,
+  quantity NUMERIC NOT NULL,
+  discount NUMERIC NOT NULL DEFAULT 0,
+  FOREIGN KEY (held_cart_id) REFERENCES held_carts(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_held_cart_items_cart ON held_cart_items(held_cart_id);
+
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT

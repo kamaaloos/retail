@@ -126,6 +126,7 @@ class AppStrings {
   String get categories => get('categories');
   String get salesHistory => get('salesHistory');
   String get inventory => get('inventory');
+  String get customers => get('customers');
   String get staff => get('staff');
   String get shifts => get('shifts');
   String get reports => get('reports');
@@ -286,6 +287,12 @@ class AppStrings {
   String get version => get('version');
   String get systemName => get('systemName');
   String get copyrightNotice => get('copyrightNotice');
+  String get checkForUpdates => get('checkForUpdates');
+  String get updateUpToDate => get('updateUpToDate');
+  String get updateAvailableTitle => get('updateAvailableTitle');
+  String get updateAvailableBody => get('updateAvailableBody');
+  String get downloadUpdate => get('downloadUpdate');
+  String get updateCheckFailed => get('updateCheckFailed');
   String get comingSoon => get('comingSoon');
   String get comingSoonBody => get('comingSoonBody');
   String get couldNotSave => get('couldNotSave');
@@ -293,16 +300,71 @@ class AppStrings {
   String get searchHint => get('searchHint');
   String get allCategories => get('allCategories');
   String get noProductsFound => get('noProductsFound');
+  String get productNotFound => get('productNotFound');
   String get cart => get('cart');
   String get clearCart => get('clearCart');
+  String get holdCart => get('holdCart');
+  String get heldCartsTitle => get('heldCartsTitle');
+  String get holdCartTitle => get('holdCartTitle');
+  String get holdCartHint => get('holdCartHint');
+  String get holdCartConfirm => get('holdCartConfirm');
+  String get cartHeld => get('cartHeld');
+  String get resumeCart => get('resumeCart');
+  String get discardHeld => get('discardHeld');
+  String get noHeldCarts => get('noHeldCarts');
+  String get heldCartItems => get('heldCartItems');
+  String get resumeWillHoldCurrent => get('resumeWillHoldCurrent');
+  String get replaceCurrentCart => get('replaceCurrentCart');
+  String get holdAndResume => get('holdAndResume');
+  String get cartResumed => get('cartResumed');
+  String get heldDiscarded => get('heldDiscarded');
   String get cartItemsCount => get('cartItemsCount');
   String get tapProductsToAdd => get('tapProductsToAdd');
+  String get selectCustomer => get('selectCustomer');
+  String get searchCustomers => get('searchCustomers');
+  String get walkInCustomer => get('walkInCustomer');
+  String get customersSubtitle => get('customersSubtitle');
+  String get newCustomer => get('newCustomer');
+  String get editCustomer => get('editCustomer');
+  String get deleteCustomer => get('deleteCustomer');
+  String get deleteCustomerConfirm => get('deleteCustomerConfirm');
+  String get noCustomersYet => get('noCustomersYet');
+  String get shiftRequiredToSell => get('shiftRequiredToSell');
   String get subtotal => get('subtotal');
   String get tax => get('tax');
   String get total => get('total');
   String get chargeBtn => get('chargeBtn');
   String get cartEmpty => get('cartEmpty');
+  String get insufficientStock => get('insufficientStock');
   String get chargeTitle => get('chargeTitle');
+  String get amountDue => get('amountDue');
+  String get selectPayment => get('selectPayment');
+  String get amountReceived => get('amountReceived');
+  String get amountTooLow => get('amountTooLow');
+  String get splitPayment => get('splitPayment');
+  String get splitPaymentHint => get('splitPaymentHint');
+  String get addPaymentLine => get('addPaymentLine');
+  String get splitAllocated => get('splitAllocated');
+  String get splitMustEqualDue => get('splitMustEqualDue');
+  String get cashPortionHint => get('cashPortionHint');
+  String get cashRoundingNote => get('cashRoundingNote');
+  String get cashRounding => get('cashRounding');
+  String get changeDue => get('changeDue');
+  String get completeSale => get('completeSale');
+  String get done => get('done');
+  String get printReceipt => get('printReceipt');
+  String get reprintReceipt => get('reprintReceipt');
+  String get testPrint => get('testPrint');
+  String get testPrintTitle => get('testPrintTitle');
+  String get testPrintBody => get('testPrintBody');
+  String get receiptLabel => get('receiptLabel');
+  String get dateLabel => get('dateLabel');
+  String get cashierLabel => get('cashierLabel');
+  String get thankYou => get('thankYou');
+  String get printingReceipt => get('printingReceipt');
+  String get printFailed => get('printFailed');
+  String get receiptPrinted => get('receiptPrinted');
+  String get discount => get('discount');
   String get payCash => get('payCash');
   String get payCard => get('payCard');
   String get payMobile => get('payMobile');
@@ -398,6 +460,20 @@ class AppStrings {
   String get employee => get('employee');
   String get refund => get('refund');
   String get refundReason => get('refundReason');
+  String get refundSelectTitle => get('refundSelectTitle');
+  String get refundSelectHint => get('refundSelectHint');
+  String get refundQtyLabel => get('refundQtyLabel');
+  String get refundAllRemaining => get('refundAllRemaining');
+  String get continueRefund => get('continueRefund');
+  String get clearBtn => get('clearBtn');
+  String get soldLabel => get('soldLabel');
+  String get alreadyRefunded => get('alreadyRefunded');
+  String get remainingLabel => get('remainingLabel');
+  String get refundNothingSelected => get('refundNothingSelected');
+  String get refundNothingLeft => get('refundNothingLeft');
+  String get refundInvalidQty => get('refundInvalidQty');
+  String get refundQtyTooHigh => get('refundQtyTooHigh');
+  String get salePartiallyRefunded => get('salePartiallyRefunded');
   String get saleRefunded => get('saleRefunded');
   String get adjustStockTitle => get('adjustStockTitle');
   String get currentStock => get('currentStock');
@@ -423,6 +499,18 @@ class AppStrings {
   String get badgeCurrent => get('badgeCurrent');
   String get shiftOpened => get('shiftOpened');
   String get shiftClosed => get('shiftClosed');
+  String get zReportTitle => get('zReportTitle');
+  String get zReportShort => get('zReportShort');
+  String get printZReport => get('printZReport');
+  String get printZReportPrompt => get('printZReportPrompt');
+  String get zReportPrinted => get('zReportPrinted');
+  String get skipBtn => get('skipBtn');
+  String get openedAtLabel => get('openedAtLabel');
+  String get closedAtLabel => get('closedAtLabel');
+  String get totalSalesLabel => get('totalSalesLabel');
+  String get otherPayments => get('otherPayments');
+  String get refundsLabel => get('refundsLabel');
+  String get differenceLabel => get('differenceLabel');
   String get cashInRecorded => get('cashInRecorded');
   String get cashOutRecorded => get('cashOutRecorded');
   String get roleOwner => get('roleOwner');
@@ -437,6 +525,15 @@ class AppStrings {
   String get pinRequired => get('pinRequired');
   String get pinTooShort => get('pinTooShort');
   String get usernameRequired => get('usernameRequired');
+  String get changePinRequiredTitle => get('changePinRequiredTitle');
+  String get changePinRequiredBody => get('changePinRequiredBody');
+  String get currentPin => get('currentPin');
+  String get newPin => get('newPin');
+  String get confirmPin => get('confirmPin');
+  String get saveNewPin => get('saveNewPin');
+  String get wrongCurrentPin => get('wrongCurrentPin');
+  String get pinCannotBeDefault => get('pinCannotBeDefault');
+  String get pinMismatch => get('pinMismatch');
   String get invalidCredentials => get('invalidCredentials');
   String get loginHint => get('loginHint');
   String get keepCurrentPin => get('keepCurrentPin');
@@ -460,6 +557,7 @@ class AppStrings {
     'categories': 'Categories',
     'salesHistory': 'Sales History',
     'inventory': 'Inventory',
+    'customers': 'Customers',
     'staff': 'Staff',
     'shifts': 'Shifts',
     'reports': 'Reports',
@@ -615,22 +713,83 @@ class AppStrings {
     'version': 'Version',
     'systemName': 'System name',
     'copyrightNotice': 'Copyright 2026 - MayleSoft retail, designed by Eng. Hasan Kamaal',
+    'checkForUpdates': 'Check for updates',
+    'updateUpToDate': 'You are on the latest version',
+    'updateAvailableTitle': 'Update available',
+    'updateAvailableBody': 'Version {version}+{build} is available.\n\n{notes}\n\nOpen the download page?',
+    'downloadUpdate': 'Download',
+    'updateCheckFailed': 'Could not check for updates: {error}',
     'comingSoon': '{title} coming soon',
     'comingSoonBody': 'This section is reserved for upcoming MayleSoft retail configuration options.',
     'couldNotSave': 'Could not save: {error}',
     'searchHint': 'Search name, SKU or barcode…',
     'allCategories': 'All',
     'noProductsFound': 'No products found',
+    'productNotFound': 'No product for «{query}»',
     'cart': 'Cart',
     'clearCart': 'Clear',
+    'holdCart': 'Hold',
+    'heldCartsTitle': 'Held checkouts',
+    'holdCartTitle': 'Hold this checkout',
+    'holdCartHint': 'Optional note (name, jacket color…)',
+    'holdCartConfirm': 'Hold & serve next',
+    'cartHeld': 'Cart held — ready for next customer',
+    'resumeCart': 'Resume',
+    'discardHeld': 'Discard',
+    'noHeldCarts': 'No held checkouts',
+    'heldCartItems': '{count} items · {total}',
+    'resumeWillHoldCurrent': 'Current cart has items. Hold it and resume the parked one?',
+    'replaceCurrentCart': 'Replace current',
+    'holdAndResume': 'Hold current & resume',
+    'cartResumed': 'Held cart restored',
+    'heldDiscarded': 'Held cart discarded',
     'cartItemsCount': '{count} items',
     'tapProductsToAdd': 'Tap products to add',
+    'selectCustomer': 'Select customer',
+    'searchCustomers': 'Search customers',
+    'walkInCustomer': 'Walk-in',
+    'customersSubtitle': '{count} customers on file',
+    'newCustomer': 'New customer',
+    'editCustomer': 'Edit customer',
+    'deleteCustomer': 'Delete customer',
+    'deleteCustomerConfirm': 'Delete customer «{name}»?',
+    'noCustomersYet': 'No customers yet',
+    'shiftRequiredToSell': 'Open a shift before charging a sale.',
     'subtotal': 'Subtotal',
     'tax': 'Tax',
     'total': 'Total',
     'chargeBtn': 'Charge {amount}',
     'cartEmpty': 'Cart is empty',
+    'insufficientStock': 'Not enough stock for {name}. Need {need}, available {have}. Sale stopped.',
     'chargeTitle': 'Charge',
+    'amountDue': 'Amount due',
+    'selectPayment': 'Payment method',
+    'amountReceived': 'Amount received',
+    'amountTooLow': 'Amount received is less than the total',
+    'splitPayment': 'Split payment',
+    'splitPaymentHint': 'Pay with more than one method (e.g. cash + card)',
+    'addPaymentLine': 'Add payment',
+    'splitAllocated': 'Allocated',
+    'splitMustEqualDue': 'Payments ({sum}) must equal amount due ({due})',
+    'cashPortionHint': 'Cash portion of this sale: {amount}',
+    'cashRoundingNote': 'Cash rounding: {raw} → {rounded}',
+    'cashRounding': 'Cash rounding',
+    'changeDue': 'Change due',
+    'completeSale': 'Complete sale',
+    'done': 'Done',
+    'printReceipt': 'Print receipt',
+    'reprintReceipt': 'Reprint',
+    'testPrint': 'Test print',
+    'testPrintTitle': 'Printer test',
+    'testPrintBody': 'If you can read this, your printer is working with MayleSoft retail.',
+    'receiptLabel': 'Receipt',
+    'dateLabel': 'Date',
+    'cashierLabel': 'Cashier',
+    'thankYou': 'Thank you for your purchase!',
+    'printingReceipt': 'Sending receipt to printer…',
+    'printFailed': 'Could not print receipt: {error}',
+    'receiptPrinted': 'Receipt sent to printer',
+    'discount': 'Discount',
     'payCash': 'Cash',
     'payCard': 'Card',
     'payMobile': 'Mobile',
@@ -725,6 +884,20 @@ class AppStrings {
     'employee': 'Employee',
     'refund': 'Refund',
     'refundReason': 'Refund reason',
+    'refundSelectTitle': 'Refund items',
+    'refundSelectHint': 'Enter the quantity to return for each line. Leave 0 to skip.',
+    'refundQtyLabel': 'Refund qty ({unit})',
+    'refundAllRemaining': 'Refund all remaining',
+    'continueRefund': 'Continue',
+    'clearBtn': 'Clear',
+    'soldLabel': 'Sold',
+    'alreadyRefunded': 'Already refunded',
+    'remainingLabel': 'Remaining',
+    'refundNothingSelected': 'Select at least one quantity to refund',
+    'refundNothingLeft': 'Nothing left to refund on this sale',
+    'refundInvalidQty': 'Quantity cannot be negative',
+    'refundQtyTooHigh': '{name}: max refundable is {max}',
+    'salePartiallyRefunded': 'Partial refund recorded',
     'saleRefunded': 'Sale refunded',
     'adjustStockTitle': 'Adjust stock · {name}',
     'currentStock': 'Current: {qty} {unit}',
@@ -750,6 +923,18 @@ class AppStrings {
     'badgeCurrent': 'current',
     'shiftOpened': 'Shift opened',
     'shiftClosed': 'Shift closed',
+    'zReportTitle': 'Z-REPORT',
+    'zReportShort': 'Z-Report',
+    'printZReport': 'Print Z-Report',
+    'printZReportPrompt': 'Print the end-of-shift Z-Report now?',
+    'zReportPrinted': 'Z-Report sent to printer',
+    'skipBtn': 'Skip',
+    'openedAtLabel': 'Opened',
+    'closedAtLabel': 'Closed',
+    'totalSalesLabel': 'Total sales',
+    'otherPayments': 'Other payments',
+    'refundsLabel': 'Refunds',
+    'differenceLabel': 'Difference',
     'cashInRecorded': 'Cash in recorded',
     'cashOutRecorded': 'Cash out recorded',
     'roleOwner': 'owner',
@@ -763,8 +948,18 @@ class AppStrings {
     'pinRequired': 'Enter your PIN',
     'pinTooShort': 'PIN must be at least 4 digits',
     'usernameRequired': 'Enter your username',
+    'changePinRequiredTitle': 'Change your PIN',
+    'changePinRequiredBody':
+        'You are using the default PIN (1234). Choose a new PIN before continuing.',
+    'currentPin': 'Current PIN',
+    'newPin': 'New PIN',
+    'confirmPin': 'Confirm new PIN',
+    'saveNewPin': 'Save new PIN',
+    'wrongCurrentPin': 'Current PIN is incorrect',
+    'pinCannotBeDefault': 'Choose a PIN other than 1234',
+    'pinMismatch': 'New PIN and confirmation do not match',
     'invalidCredentials': 'Invalid username or PIN',
-    'loginHint': 'Default: admin / 1234',
+    'loginHint': 'First login: admin / 1234 (you will be asked to change it)',
     'keepCurrentPin': 'Leave blank to keep current PIN',
     'accessDenied': 'You do not have access to this section',
   };
@@ -784,6 +979,7 @@ class AppStrings {
       'categories': 'Catégories',
       'salesHistory': 'Historique des ventes',
       'inventory': 'Inventaire',
+      'customers': 'Clients',
       'staff': 'Personnel',
       'shifts': 'Sessions',
       'reports': 'Rapports',
@@ -939,22 +1135,83 @@ class AppStrings {
       'version': 'Version',
       'systemName': 'Nom du système',
       'copyrightNotice': 'Copyright 2026 - MayleSoft retail, designed by Eng. Hasan Kamaal',
+      'checkForUpdates': 'Rechercher des mises à jour',
+      'updateUpToDate': 'Vous avez la dernière version',
+      'updateAvailableTitle': 'Mise à jour disponible',
+      'updateAvailableBody': 'La version {version}+{build} est disponible.\n\n{notes}\n\nOuvrir la page de téléchargement ?',
+      'downloadUpdate': 'Télécharger',
+      'updateCheckFailed': 'Impossible de vérifier les mises à jour : {error}',
       'comingSoon': '{title} bientôt disponible',
       'comingSoonBody': 'Cette section est réservée aux options de configuration à venir.',
       'couldNotSave': 'Enregistrement impossible : {error}',
       'searchHint': 'Rechercher nom, SKU ou code-barres…',
       'allCategories': 'Tout',
       'noProductsFound': 'Aucun produit trouvé',
+      'productNotFound': 'Aucun produit pour «{query}»',
       'cart': 'Panier',
       'clearCart': 'Vider',
+      'holdCart': 'Mettre en attente',
+      'heldCartsTitle': 'Caisses en attente',
+      'holdCartTitle': 'Mettre cette caisse en attente',
+      'holdCartHint': 'Note optionnelle (nom, veste…)',
+      'holdCartConfirm': 'Attendre & servir le suivant',
+      'cartHeld': 'Panier en attente — prêt pour le client suivant',
+      'resumeCart': 'Reprendre',
+      'discardHeld': 'Supprimer',
+      'noHeldCarts': 'Aucune caisse en attente',
+      'heldCartItems': '{count} articles · {total}',
+      'resumeWillHoldCurrent': 'Le panier actuel a des articles. Le mettre en attente et reprendre l\'autre ?',
+      'replaceCurrentCart': 'Remplacer l\'actuel',
+      'holdAndResume': 'Attendre & reprendre',
+      'cartResumed': 'Panier restauré',
+      'heldDiscarded': 'Panier en attente supprimé',
       'cartItemsCount': '{count} articles',
       'tapProductsToAdd': 'Touchez un produit pour l\'ajouter',
+      'selectCustomer': 'Choisir un client',
+      'searchCustomers': 'Rechercher des clients',
+      'walkInCustomer': 'Passage',
+      'customersSubtitle': '{count} clients enregistrés',
+      'newCustomer': 'Nouveau client',
+      'editCustomer': 'Modifier le client',
+      'deleteCustomer': 'Supprimer le client',
+      'deleteCustomerConfirm': 'Supprimer le client «{name}» ?',
+      'noCustomersYet': 'Aucun client pour le moment',
+      'shiftRequiredToSell': 'Ouvrez une session avant d\'encaisser une vente.',
       'subtotal': 'Sous-total',
       'tax': 'Taxe',
       'total': 'Total',
       'chargeBtn': 'Encaisser {amount}',
       'cartEmpty': 'Le panier est vide',
+      'insufficientStock': 'Stock insuffisant pour {name}. Besoin {need}, disponible {have}. Vente annulée.',
       'chargeTitle': 'Encaisser',
+      'amountDue': 'Montant dû',
+      'selectPayment': 'Mode de paiement',
+      'amountReceived': 'Montant reçu',
+      'amountTooLow': 'Le montant reçu est inférieur au total',
+      'splitPayment': 'Paiement fractionné',
+      'splitPaymentHint': 'Payer avec plusieurs modes (ex. espèces + carte)',
+      'addPaymentLine': 'Ajouter un paiement',
+      'splitAllocated': 'Réparti',
+      'splitMustEqualDue': 'Les paiements ({sum}) doivent égaler le dû ({due})',
+      'cashPortionHint': 'Part espèces : {amount}',
+      'cashRoundingNote': 'Arrondi espèces : {raw} → {rounded}',
+      'cashRounding': 'Arrondi espèces',
+      'changeDue': 'Monnaie à rendre',
+      'completeSale': 'Terminer la vente',
+      'done': 'OK',
+      'printReceipt': 'Imprimer le reçu',
+      'reprintReceipt': 'Réimprimer',
+      'testPrint': 'Impression test',
+      'testPrintTitle': 'Test imprimante',
+      'testPrintBody': 'Si vous lisez ceci, l\'imprimante fonctionne avec MayleSoft retail.',
+      'receiptLabel': 'Reçu',
+      'dateLabel': 'Date',
+      'cashierLabel': 'Caissier',
+      'thankYou': 'Merci pour votre achat !',
+      'printingReceipt': 'Envoi du reçu à l\'imprimante…',
+      'printFailed': 'Impossible d\'imprimer le reçu : {error}',
+      'receiptPrinted': 'Reçu envoyé à l\'imprimante',
+      'discount': 'Remise',
       'payCash': 'Espèces',
       'payCard': 'Carte',
       'payMobile': 'Mobile',
@@ -1049,6 +1306,20 @@ class AppStrings {
       'employee': 'Employé',
       'refund': 'Rembourser',
       'refundReason': 'Motif du remboursement',
+      'refundSelectTitle': 'Articles à rembourser',
+      'refundSelectHint': 'Indiquez la quantité à retourner pour chaque ligne. 0 pour ignorer.',
+      'refundQtyLabel': 'Qté à rembourser ({unit})',
+      'refundAllRemaining': 'Tout le reste',
+      'continueRefund': 'Continuer',
+      'clearBtn': 'Effacer',
+      'soldLabel': 'Vendu',
+      'alreadyRefunded': 'Déjà remboursé',
+      'remainingLabel': 'Restant',
+      'refundNothingSelected': 'Sélectionnez au moins une quantité',
+      'refundNothingLeft': 'Rien à rembourser sur cette vente',
+      'refundInvalidQty': 'La quantité ne peut pas être négative',
+      'refundQtyTooHigh': '{name} : maximum remboursable {max}',
+      'salePartiallyRefunded': 'Remboursement partiel enregistré',
       'saleRefunded': 'Vente remboursée',
       'adjustStockTitle': 'Ajuster le stock · {name}',
       'currentStock': 'Actuel : {qty} {unit}',
@@ -1074,6 +1345,18 @@ class AppStrings {
       'badgeCurrent': 'actuel',
       'shiftOpened': 'Session ouverte',
       'shiftClosed': 'Session fermée',
+      'zReportTitle': 'RAPPORT Z',
+      'zReportShort': 'Rapport Z',
+      'printZReport': 'Imprimer le rapport Z',
+      'printZReportPrompt': 'Imprimer le rapport Z de fin de session ?',
+      'zReportPrinted': 'Rapport Z envoyé à l\'imprimante',
+      'skipBtn': 'Passer',
+      'openedAtLabel': 'Ouverture',
+      'closedAtLabel': 'Fermeture',
+      'totalSalesLabel': 'Ventes totales',
+      'otherPayments': 'Autres paiements',
+      'refundsLabel': 'Remboursements',
+      'differenceLabel': 'Écart',
       'cashInRecorded': 'Entrée caisse enregistrée',
       'cashOutRecorded': 'Sortie caisse enregistrée',
       'roleOwner': 'propriétaire',
@@ -1087,8 +1370,18 @@ class AppStrings {
       'pinRequired': 'Saisissez votre PIN',
       'pinTooShort': 'Le PIN doit contenir au moins 4 chiffres',
       'usernameRequired': 'Saisissez votre identifiant',
+      'changePinRequiredTitle': 'Changez votre PIN',
+      'changePinRequiredBody':
+          'Vous utilisez le PIN par défaut (1234). Choisissez un nouveau PIN avant de continuer.',
+      'currentPin': 'PIN actuel',
+      'newPin': 'Nouveau PIN',
+      'confirmPin': 'Confirmer le nouveau PIN',
+      'saveNewPin': 'Enregistrer le PIN',
+      'wrongCurrentPin': 'PIN actuel incorrect',
+      'pinCannotBeDefault': 'Choisissez un PIN autre que 1234',
+      'pinMismatch': 'Le nouveau PIN et la confirmation ne correspondent pas',
       'invalidCredentials': 'Identifiant ou PIN incorrect',
-      'loginHint': 'Par défaut : admin / 1234',
+      'loginHint': 'Première connexion : admin / 1234 (changement demandé)',
       'keepCurrentPin': 'Laisser vide pour conserver le PIN actuel',
       'accessDenied': 'Vous n\'avez pas accès à cette section',
     }),
@@ -1100,6 +1393,7 @@ class AppStrings {
       'categories': 'التصنيفات',
       'salesHistory': 'سجل المبيعات',
       'inventory': 'المخزون',
+      'customers': 'العملاء',
       'staff': 'الموظفون',
       'shifts': 'الورديات',
       'reports': 'التقارير',
@@ -1255,22 +1549,83 @@ class AppStrings {
       'version': 'الإصدار',
       'systemName': 'اسم النظام',
       'copyrightNotice': 'Copyright 2026 - MayleSoft retail, designed by Eng. Hasan Kamaal',
+      'checkForUpdates': 'التحقق من التحديثات',
+      'updateUpToDate': 'أنت على أحدث إصدار',
+      'updateAvailableTitle': 'يتوفر تحديث',
+      'updateAvailableBody': 'الإصدار {version}+{build} متاح.\n\n{notes}\n\nفتح صفحة التنزيل؟',
+      'downloadUpdate': 'تنزيل',
+      'updateCheckFailed': 'تعذر التحقق من التحديثات: {error}',
       'comingSoon': '{title} قريبًا',
       'comingSoonBody': 'هذا القسم مخصص لخيارات إعدادات MayleSoft retail القادمة.',
       'couldNotSave': 'تعذر الحفظ: {error}',
       'searchHint': 'ابحث بالاسم أو الرمز أو الباركود…',
       'allCategories': 'الكل',
       'noProductsFound': 'لم يُعثر على منتجات',
+      'productNotFound': 'لا يوجد منتج لـ «{query}»',
       'cart': 'السلة',
       'clearCart': 'مسح',
+      'holdCart': 'تعليق',
+      'heldCartsTitle': 'الفواتير المعلقة',
+      'holdCartTitle': 'تعليق هذه الفاتورة',
+      'holdCartHint': 'ملاحظة اختيارية (الاسم، اللون…)',
+      'holdCartConfirm': 'تعليق وخدمة التالي',
+      'cartHeld': 'تم التعليق — جاهز للعميل التالي',
+      'resumeCart': 'استئناف',
+      'discardHeld': 'تجاهل',
+      'noHeldCarts': 'لا توجد فواتير معلقة',
+      'heldCartItems': '{count} عناصر · {total}',
+      'resumeWillHoldCurrent': 'السلة الحالية تحتوي عناصر. هل تريد تعليقها واستئناف المعلقة؟',
+      'replaceCurrentCart': 'استبدال الحالية',
+      'holdAndResume': 'تعليق الحالية والاستئناف',
+      'cartResumed': 'تم استعادة السلة المعلقة',
+      'heldDiscarded': 'تم تجاهل السلة المعلقة',
       'cartItemsCount': '{count} عنصر',
       'tapProductsToAdd': 'اضغط على المنتجات للإضافة',
+      'selectCustomer': 'اختر عميلاً',
+      'searchCustomers': 'ابحث عن العملاء',
+      'walkInCustomer': 'زائر',
+      'customersSubtitle': '{count} عملاء مسجّلون',
+      'newCustomer': 'عميل جديد',
+      'editCustomer': 'تعديل العميل',
+      'deleteCustomer': 'حذف العميل',
+      'deleteCustomerConfirm': 'حذف العميل «{name}»؟',
+      'noCustomersYet': 'لا عملاء بعد',
+      'shiftRequiredToSell': 'افتح وردية قبل إتمام البيع.',
       'subtotal': 'المجموع الفرعي',
       'tax': 'الضريبة',
       'total': 'الإجمالي',
       'chargeBtn': 'تحصيل {amount}',
       'cartEmpty': 'السلة فارغة',
+      'insufficientStock': 'المخزون غير كافٍ لـ {name}. المطلوب {need}، المتاح {have}. تم إيقاف البيع.',
       'chargeTitle': 'تحصيل',
+      'amountDue': 'المبلغ المستحق',
+      'selectPayment': 'طريقة الدفع',
+      'amountReceived': 'المبلغ المستلم',
+      'amountTooLow': 'المبلغ المستلم أقل من الإجمالي',
+      'splitPayment': 'دفع مقسم',
+      'splitPaymentHint': 'ادفع بأكثر من طريقة (مثل نقد + بطاقة)',
+      'addPaymentLine': 'إضافة دفعة',
+      'splitAllocated': 'المخصص',
+      'splitMustEqualDue': 'المدفوعات ({sum}) يجب أن تساوي المستحق ({due})',
+      'cashPortionHint': 'جزء النقد: {amount}',
+      'cashRoundingNote': 'تقريب النقد: {raw} → {rounded}',
+      'cashRounding': 'تقريب النقد',
+      'changeDue': 'الباقي للعميل',
+      'completeSale': 'إتمام البيع',
+      'done': 'تم',
+      'printReceipt': 'طباعة الإيصال',
+      'reprintReceipt': 'إعادة الطباعة',
+      'testPrint': 'طباعة تجريبية',
+      'testPrintTitle': 'اختبار الطابعة',
+      'testPrintBody': 'إذا قرأت هذا، فالطابعة تعمل مع MayleSoft retail.',
+      'receiptLabel': 'إيصال',
+      'dateLabel': 'التاريخ',
+      'cashierLabel': 'الكاشير',
+      'thankYou': 'شكرًا لشرائك!',
+      'printingReceipt': 'جارٍ إرسال الإيصال إلى الطابعة…',
+      'printFailed': 'تعذر طباعة الإيصال: {error}',
+      'receiptPrinted': 'تم إرسال الإيصال إلى الطابعة',
+      'discount': 'خصم',
       'payCash': 'نقدًا',
       'payCard': 'بطاقة',
       'payMobile': 'محفظة',
@@ -1365,6 +1720,20 @@ class AppStrings {
       'employee': 'الموظف',
       'refund': 'استرداد',
       'refundReason': 'سبب الاسترداد',
+      'refundSelectTitle': 'استرداد العناصر',
+      'refundSelectHint': 'أدخل الكمية المراد إرجاعها لكل سطر. اترك 0 للتخطي.',
+      'refundQtyLabel': 'كمية الاسترداد ({unit})',
+      'refundAllRemaining': 'استرداد المتبقي بالكامل',
+      'continueRefund': 'متابعة',
+      'clearBtn': 'مسح',
+      'soldLabel': 'مباع',
+      'alreadyRefunded': 'تم استرداده',
+      'remainingLabel': 'المتبقي',
+      'refundNothingSelected': 'حدد كمية واحدة على الأقل للاسترداد',
+      'refundNothingLeft': 'لا يوجد شيء متبقٍ للاسترداد',
+      'refundInvalidQty': 'لا يمكن أن تكون الكمية سالبة',
+      'refundQtyTooHigh': '{name}: الحد الأقصى للاسترداد {max}',
+      'salePartiallyRefunded': 'تم تسجيل استرداد جزئي',
       'saleRefunded': 'تم استرداد البيع',
       'adjustStockTitle': 'تعديل المخزون · {name}',
       'currentStock': 'الحالي: {qty} {unit}',
@@ -1390,6 +1759,18 @@ class AppStrings {
       'badgeCurrent': 'الحالي',
       'shiftOpened': 'تم فتح الوردية',
       'shiftClosed': 'تم إغلاق الوردية',
+      'zReportTitle': 'تقرير Z',
+      'zReportShort': 'تقرير Z',
+      'printZReport': 'طباعة تقرير Z',
+      'printZReportPrompt': 'هل تريد طباعة تقرير Z الآن؟',
+      'zReportPrinted': 'تم إرسال تقرير Z إلى الطابعة',
+      'skipBtn': 'تخطي',
+      'openedAtLabel': 'الفتح',
+      'closedAtLabel': 'الإغلاق',
+      'totalSalesLabel': 'إجمالي المبيعات',
+      'otherPayments': 'مدفوعات أخرى',
+      'refundsLabel': 'المرتجعات',
+      'differenceLabel': 'الفرق',
       'cashInRecorded': 'تم تسجيل الإيداع',
       'cashOutRecorded': 'تم تسجيل السحب',
       'roleOwner': 'مالك',
@@ -1403,8 +1784,18 @@ class AppStrings {
       'pinRequired': 'أدخل رمز PIN',
       'pinTooShort': 'يجب أن يكون PIN 4 أرقام على الأقل',
       'usernameRequired': 'أدخل اسم المستخدم',
+      'changePinRequiredTitle': 'غيّر رمز PIN',
+      'changePinRequiredBody':
+          'أنت تستخدم رمز PIN الافتراضي (1234). اختر رمزًا جديدًا قبل المتابعة.',
+      'currentPin': 'رمز PIN الحالي',
+      'newPin': 'رمز PIN الجديد',
+      'confirmPin': 'تأكيد رمز PIN الجديد',
+      'saveNewPin': 'حفظ رمز PIN',
+      'wrongCurrentPin': 'رمز PIN الحالي غير صحيح',
+      'pinCannotBeDefault': 'اختر رمزًا غير 1234',
+      'pinMismatch': 'رمز PIN الجديد والتأكيد غير متطابقين',
       'invalidCredentials': 'اسم المستخدم أو PIN غير صحيح',
-      'loginHint': 'الافتراضي: admin / 1234',
+      'loginHint': 'أول دخول: admin / 1234 (سيُطلب تغييره)',
       'keepCurrentPin': 'اتركه فارغًا للاحتفاظ برمز PIN الحالي',
       'accessDenied': 'ليس لديك صلاحية الوصول إلى هذا القسم',
     }),
@@ -1416,6 +1807,7 @@ class AppStrings {
       'categories': 'Qaybaha',
       'salesHistory': 'Taariikhda iibka',
       'inventory': 'Kaydka',
+      'customers': 'Macaamiisha',
       'staff': 'Shaqaalaha',
       'shifts': 'Shaqooyinka',
       'reports': 'Warbixinada',
@@ -1571,6 +1963,12 @@ class AppStrings {
       'version': 'Nooca',
       'systemName': 'Magaca nidaamka',
       'copyrightNotice': 'Copyright 2026 - MayleSoft retail, designed by Eng. Hasan Kamaal',
+      'checkForUpdates': 'Hubi cusboonaysiinta',
+      'updateUpToDate': 'Waxaad haysataa nooca ugu dambeeyay',
+      'updateAvailableTitle': 'Cusboonaysiin ayaa diyaar',
+      'updateAvailableBody': 'Nooca {version}+{build} waa diyaar.\n\n{notes}\n\nFur bogga soo-dejinta?',
+      'downloadUpdate': 'Soo deji',
+      'updateCheckFailed': 'Lama hubin karo cusboonaysiinta: {error}',
       'comingSoon': '{title} dhawaan',
       'comingSoonBody': 'Qaybtan waxaa loogu talagalay doorashooyinka dejinta ee soo socda ee MayleSoft retail.',
       'couldNotSave': 'Lama kaydin karo: {error}',
@@ -1579,14 +1977,69 @@ class AppStrings {
       'noProductsFound': 'Alaab lama helin',
       'cart': 'Gaadhiga',
       'clearCart': 'Nadiifi',
+      'holdCart': 'Haye',
+      'heldCartsTitle': 'Checkout-yada la hayo',
+      'holdCartTitle': 'Haye checkout-kan',
+      'holdCartHint': 'Qoraal ikhtiyaari ah (magac, midab…)',
+      'holdCartConfirm': 'Haye oo u adeeg kan xiga',
+      'cartHeld': 'Gaadhigii waa la hayay — diyaar macaamiisha xiga',
+      'resumeCart': 'Soo celi',
+      'discardHeld': 'Tirtir',
+      'noHeldCarts': 'Ma jiraan checkout la hayo',
+      'heldCartItems': '{count} shay · {total}',
+      'resumeWillHoldCurrent': 'Gaadhiga hadda wuxuu leeyahay shay. Ma hayaysaa oo soo celinaysaa kan kale?',
+      'replaceCurrentCart': 'Beddel kan hadda',
+      'holdAndResume': 'Haye kan hadda oo soo celi',
+      'cartResumed': 'Gaadhigii la hayay waa la soo celiyay',
+      'heldDiscarded': 'Gaadhigii la hayay waa la tirtiray',
       'cartItemsCount': '{count} shay',
       'tapProductsToAdd': 'Taabo alaabta si aad ugu darto',
+      'selectCustomer': 'Dooro macmiil',
+      'searchCustomers': 'Raadi macaamiisha',
+      'walkInCustomer': 'Marti',
+      'customersSubtitle': '{count} macmiil ayaa diiwaangashan',
+      'newCustomer': 'Macmiil cusub',
+      'editCustomer': 'Wax ka beddel macmiil',
+      'deleteCustomer': 'Tirtir macmiil',
+      'deleteCustomerConfirm': 'Ma tirtiraysaa macmiil «{name}»?',
+      'noCustomersYet': 'Weli macmiil ma jiro',
+      'shiftRequiredToSell': 'Fur shaqo ka hor intaadan iibin.',
+      'productNotFound': 'Alaab looma helin «{query}»',
       'subtotal': 'Wadarta hoose',
       'tax': 'Canshuur',
       'total': 'Wadarta',
       'chargeBtn': 'Qaad {amount}',
       'cartEmpty': 'Gaadhigu waa madhan',
+      'insufficientStock': 'Kaydka {name} kuma filna. Loobaahan yahay {need}, jira {have}. Iibka waa la joojiyay.',
       'chargeTitle': 'Qaad lacagta',
+      'amountDue': 'Lacagta la leeyahay',
+      'selectPayment': 'Habka lacag-bixinta',
+      'amountReceived': 'Lacagta la helay',
+      'amountTooLow': 'Lacagta la helay waxay ka yar tahay wadarta',
+      'splitPayment': 'Lacag-bixin kala qaybsan',
+      'splitPaymentHint': 'Ku bixi in ka badan hal hab (tusaale cash + card)',
+      'addPaymentLine': 'Kudar lacag-bixin',
+      'splitAllocated': 'Loo qooniyay',
+      'splitMustEqualDue': 'Lacag-bixinta ({sum}) waa inay la mid noqoto ({due})',
+      'cashPortionHint': 'Qaybta cash: {amount}',
+      'cashRoundingNote': 'Wareejinta lacagta caddaanka: {raw} → {rounded}',
+      'cashRounding': 'Wareejinta lacagta caddaanka',
+      'changeDue': 'Haraaga macaamiilka',
+      'completeSale': 'Dhammee iibka',
+      'done': 'OK',
+      'printReceipt': 'Daabac rasiidka',
+      'reprintReceipt': 'Dib u daabac',
+      'testPrint': 'Daabacaad tijaabo',
+      'testPrintTitle': 'Tijaabada daabacaha',
+      'testPrintBody': 'Haddii aad tan akhrido, daabacahaagu wuxuu shaqeeyaa MayleSoft retail.',
+      'receiptLabel': 'Rasiid',
+      'dateLabel': 'Taariikh',
+      'cashierLabel': 'Khasnajiga',
+      'thankYou': 'Waad ku mahadsan tahay iibsigaaga!',
+      'printingReceipt': 'Rasiidka waxaa loo dirayaa daabacaha…',
+      'printFailed': 'Rasiidka lama daabici karin: {error}',
+      'receiptPrinted': 'Rasiidka waa loo diray daabacaha',
+      'discount': 'Qiimo-dhimis',
       'payCash': 'Lacag caddaan',
       'payCard': 'Kaarka',
       'payMobile': 'Moobile',
@@ -1681,6 +2134,20 @@ class AppStrings {
       'employee': 'Shaqaale',
       'refund': 'Soo celi',
       'refundReason': 'Sababta soo-celinta',
+      'refundSelectTitle': 'Soo celi alaabta',
+      'refundSelectHint': 'Geli tirada la soo celinayo. 0 = iska dhaaf.',
+      'refundQtyLabel': 'Tirada soo-celinta ({unit})',
+      'refundAllRemaining': 'Soo celi waxa haray oo dhan',
+      'continueRefund': 'Sii wad',
+      'clearBtn': 'Nadiifi',
+      'soldLabel': 'La iibiyay',
+      'alreadyRefunded': 'Hore loo soo celiyay',
+      'remainingLabel': 'Haraa',
+      'refundNothingSelected': 'Dooro ugu yaraan hal tiro si aad u soo celiso',
+      'refundNothingLeft': 'Wax soo-celin ah kuma hadhin iibkan',
+      'refundInvalidQty': 'Tiradu ma noqon karto mid taban',
+      'refundQtyTooHigh': '{name}: ugu badnaan {max}',
+      'salePartiallyRefunded': 'Soo-celin qayb ah waa la diiwaangeliyay',
       'saleRefunded': 'Iibka waa la soo celiyay',
       'adjustStockTitle': 'Hagaaji kaydka · {name}',
       'currentStock': 'Hadda: {qty} {unit}',
@@ -1706,6 +2173,18 @@ class AppStrings {
       'badgeCurrent': 'hadda',
       'shiftOpened': 'Shaqada waa la furay',
       'shiftClosed': 'Shaqada waa la xiray',
+      'zReportTitle': 'WARBIXIN Z',
+      'zReportShort': 'Warbixin Z',
+      'printZReport': 'Daabac warbixinta Z',
+      'printZReportPrompt': 'Ma daabici kartaa warbixinta Z ee dhamaadka shaqada?',
+      'zReportPrinted': 'Warbixinta Z waxaa loo diray daabacaha',
+      'skipBtn': 'Ka bood',
+      'openedAtLabel': 'La furay',
+      'closedAtLabel': 'La xiray',
+      'totalSalesLabel': 'Wadarta iibka',
+      'otherPayments': 'Lacag-bixinno kale',
+      'refundsLabel': 'Soo-celinta',
+      'differenceLabel': 'Farqiga',
       'cashInRecorded': 'Lacag gelinta waa la diiwaangeliyay',
       'cashOutRecorded': 'Lacag bixinta waa la diiwaangeliyay',
       'roleOwner': 'milkiile',
@@ -1719,8 +2198,18 @@ class AppStrings {
       'pinRequired': 'Geli PIN-kaaga',
       'pinTooShort': 'PIN-ku waa inuu ahaadaa ugu yaraan 4 lambar',
       'usernameRequired': 'Geli magaca isticmaalaha',
+      'changePinRequiredTitle': 'Beddel PIN-kaaga',
+      'changePinRequiredBody':
+          'Waxaad isticmaalaysaa PIN-ka asalka ah (1234). Door PIN cusub ka hor intaadan sii wadin.',
+      'currentPin': 'PIN-ka hadda',
+      'newPin': 'PIN cusub',
+      'confirmPin': 'Xaqiiji PIN-ka cusub',
+      'saveNewPin': 'Kaydi PIN-ka cusub',
+      'wrongCurrentPin': 'PIN-ka hadda waa khalad',
+      'pinCannotBeDefault': 'Door PIN aan ahayn 1234',
+      'pinMismatch': 'PIN-ka cusub iyo xaqiijinta isma waafaqayaan',
       'invalidCredentials': 'Magaca isticmaalaha ama PIN khaldan',
-      'loginHint': 'Asal ahaan: admin / 1234',
+      'loginHint': 'Gelitaanka ugu horreeya: admin / 1234 (waa lagu weydiin doonaa inaad beddesho)',
       'keepCurrentPin': 'Ka tag madhan si aad u haysato PIN-ka hadda',
       'accessDenied': 'Ma haysatid gelitaanka qaybtan',
     }),

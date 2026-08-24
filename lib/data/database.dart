@@ -43,7 +43,7 @@ class AppDatabase {
     _db = await databaseFactory.openDatabase(
       dbPath,
       options: OpenDatabaseOptions(
-        version: 10,
+        version: 11,
         onConfigure: (db) async {
           await db.execute('PRAGMA foreign_keys = ON');
         },
@@ -78,6 +78,9 @@ class AppDatabase {
           }
           if (oldVersion < 10) {
             await _migrateToV10(db);
+          }
+          if (oldVersion < 11) {
+            await _migrateToV11(db);
           }
         },
       ),
@@ -282,6 +285,32 @@ class AppDatabase {
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
       )
     ''');
+  }
+
+  Future<void> _migrateToV11(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS held_carts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        label TEXT NOT NULL,
+        employee_id INTEGER,
+        held_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (employee_id) REFERENCES employees(id)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS held_cart_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        held_cart_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity NUMERIC NOT NULL,
+        discount NUMERIC NOT NULL DEFAULT 0,
+        FOREIGN KEY (held_cart_id) REFERENCES held_carts(id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products(id)
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_held_cart_items_cart ON held_cart_items(held_cart_id)',
+    );
   }
 
   String get databasePath {

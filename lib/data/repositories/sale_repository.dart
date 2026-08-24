@@ -2,6 +2,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../database.dart';
 import '../../models/cart_item.dart';
+import '../../models/insufficient_stock.dart';
 import '../../models/sale.dart';
 
 class SaleRepository {
@@ -9,14 +10,36 @@ class SaleRepository {
 
   Future<Sale> checkout({
     required List<CartItem> items,
-    required String paymentMethod,
+    String paymentMethod = 'cash',
+    List<({String method, double amount})>? payments,
     int? employeeId,
     int? customerId,
     double cartDiscount = 0,
+    /// When set (cash/non-card nickel rounding), becomes the stored sale total.
+    double? chargedTotal,
   }) async {
     if (items.isEmpty) throw ArgumentError('Cart is empty');
 
     return _db.transaction((txn) async {
+      for (final item in items) {
+        final productId = item.product.id;
+        if (productId == null) {
+          throw ArgumentError('Cart item is missing a product id');
+        }
+        final stockRows = await txn.rawQuery(
+          'SELECT COALESCE(SUM(quantity), 0) AS q FROM stock_movements WHERE product_id = ?',
+          [productId],
+        );
+        final available = (stockRows.first['q'] as num?)?.toDouble() ?? 0;
+        if (item.quantity > available + 0.0001) {
+          throw InsufficientStockException(
+            productName: item.product.name,
+            requested: item.quantity,
+            available: available < 0 ? 0 : available,
+          );
+        }
+      }
+
       final receiptNumber = await _nextReceiptNumber(txn);
 
       double subtotal = 0;
@@ -25,7 +48,10 @@ class SaleRepository {
         subtotal += item.lineSubtotal - item.discount;
         tax += item.taxAmount;
       }
-      final total = subtotal - cartDiscount + tax;
+      final rawTotal = double.parse((subtotal - cartDiscount + tax).toStringAsFixed(2));
+      final total = chargedTotal != null
+          ? double.parse(chargedTotal.toStringAsFixed(2))
+          : rawTotal;
 
       final saleId = await txn.insert('sales', {
         'receipt_number': receiptNumber,
@@ -61,11 +87,17 @@ class SaleRepository {
         });
       }
 
-      await txn.insert('payments', {
-        'sale_id': saleId,
-        'method': paymentMethod,
-        'amount': total,
-      });
+      final paymentRows = payments == null || payments.isEmpty
+          ? <({String method, double amount})>[(method: paymentMethod, amount: total)]
+          : payments;
+      for (final p in paymentRows) {
+        if (p.amount <= 0) continue;
+        await txn.insert('payments', {
+          'sale_id': saleId,
+          'method': p.method,
+          'amount': p.amount,
+        });
+      }
 
       final rows = await txn.rawQuery('''
         SELECT s.*, e.name AS employee_name
@@ -131,7 +163,13 @@ class SaleRepository {
     if (saleRows.isEmpty) return null;
 
     final itemRows = await _db.rawQuery('''
-      SELECT si.*, p.name AS product_name, IFNULL(p.unit, 'pcs') AS unit
+      SELECT si.*, p.name AS product_name, IFNULL(p.unit, 'pcs') AS unit,
+        COALESCE((
+          SELECT SUM(ri.quantity)
+          FROM return_items ri
+          JOIN returns r ON r.id = ri.return_id
+          WHERE r.sale_id = si.sale_id AND ri.product_id = si.product_id
+        ), 0) AS refunded_qty
       FROM sale_items si
       LEFT JOIN products p ON p.id = si.product_id
       WHERE si.sale_id = ?
@@ -146,7 +184,7 @@ class SaleRepository {
     );
   }
 
-  /// Refund selected quantities from a completed sale; restocks inventory.
+  /// Refund selected quantities from a completed/partial sale; restocks inventory.
   Future<void> refundSale({
     required int saleId,
     required Map<int, double> productQuantities,
@@ -156,14 +194,28 @@ class SaleRepository {
     if (productQuantities.isEmpty) throw ArgumentError('Nothing to refund');
 
     await _db.transaction((txn) async {
+      final saleRows = await txn.query('sales', where: 'id = ?', whereArgs: [saleId]);
+      if (saleRows.isEmpty) throw StateError('Sale not found');
+      final status = saleRows.first['status'] as String? ?? 'completed';
+      if (status == 'refunded') {
+        throw StateError('Sale is already fully refunded');
+      }
+
       final detailItems = await txn.rawQuery('''
-        SELECT si.*, p.name AS product_name
+        SELECT si.*, p.name AS product_name,
+          COALESCE((
+            SELECT SUM(ri.quantity)
+            FROM return_items ri
+            JOIN returns r ON r.id = ri.return_id
+            WHERE r.sale_id = si.sale_id AND ri.product_id = si.product_id
+          ), 0) AS refunded_qty
         FROM sale_items si
         LEFT JOIN products p ON p.id = si.product_id
         WHERE si.sale_id = ?
       ''', [saleId]);
 
       double refundTotal = 0;
+      var anyRefunded = false;
       final returnId = await txn.insert('returns', {
         'sale_id': saleId,
         'employee_id': employeeId ?? 1,
@@ -171,13 +223,28 @@ class SaleRepository {
         'reason': reason,
       });
 
+      // Aggregate requested qty per product (UI may send one entry per line).
+      final requested = <int, double>{};
+      for (final entry in productQuantities.entries) {
+        if (entry.value <= 0) continue;
+        requested[entry.key] = (requested[entry.key] ?? 0) + entry.value;
+      }
+
       for (final row in detailItems) {
         final productId = row['product_id'] as int;
-        final qty = productQuantities[productId];
-        if (qty == null || qty <= 0) continue;
+        final want = requested[productId];
+        if (want == null || want <= 0) continue;
 
         final soldQty = (row['quantity'] as num).toDouble();
-        final refundQty = qty > soldQty ? soldQty : qty;
+        final already = (row['refunded_qty'] as num?)?.toDouble() ?? 0;
+        final remaining = soldQty - already;
+        if (remaining <= 0.0001) continue;
+
+        final refundQty = want > remaining ? remaining : want;
+        requested[productId] = want - refundQty;
+        if (refundQty <= 0.0001) continue;
+
+        anyRefunded = true;
         final unitPrice = (row['unit_price'] as num).toDouble();
         final lineTotal = unitPrice * refundQty;
         refundTotal += lineTotal;
@@ -201,8 +268,39 @@ class SaleRepository {
         });
       }
 
+      if (!anyRefunded) {
+        throw StateError('No refundable quantity remaining');
+      }
+
       await txn.update('returns', {'total': refundTotal}, where: 'id = ?', whereArgs: [returnId]);
-      await txn.update('sales', {'status': 'refunded'}, where: 'id = ?', whereArgs: [saleId]);
+
+      // Recompute remaining across all lines to set sale status.
+      final afterItems = await txn.rawQuery('''
+        SELECT si.quantity,
+          COALESCE((
+            SELECT SUM(ri.quantity)
+            FROM return_items ri
+            JOIN returns r ON r.id = ri.return_id
+            WHERE r.sale_id = si.sale_id AND ri.product_id = si.product_id
+          ), 0) AS refunded_qty
+        FROM sale_items si
+        WHERE si.sale_id = ?
+      ''', [saleId]);
+      var fullyRefunded = true;
+      for (final row in afterItems) {
+        final sold = (row['quantity'] as num).toDouble();
+        final refunded = (row['refunded_qty'] as num?)?.toDouble() ?? 0;
+        if (refunded + 0.0001 < sold) {
+          fullyRefunded = false;
+          break;
+        }
+      }
+      await txn.update(
+        'sales',
+        {'status': fullyRefunded ? 'refunded' : 'partial_refund'},
+        where: 'id = ?',
+        whereArgs: [saleId],
+      );
     });
   }
 

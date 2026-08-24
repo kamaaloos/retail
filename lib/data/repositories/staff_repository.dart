@@ -124,21 +124,44 @@ class StaffRepository {
     }
 
     final salesRows = await _db.rawQuery('''
-      SELECT COALESCE(SUM(p.amount), 0) AS cash_sales
+      SELECT
+        COALESCE(SUM(CASE WHEN LOWER(p.method) LIKE '%cash%' THEN p.amount ELSE 0 END), 0) AS cash_sales,
+        COALESCE(SUM(CASE WHEN LOWER(p.method) LIKE '%card%'
+            OR LOWER(p.method) LIKE '%credit%'
+            OR LOWER(p.method) LIKE '%debit%' THEN p.amount ELSE 0 END), 0) AS card_sales,
+        COALESCE(SUM(p.amount), 0) AS total_sales,
+        COUNT(DISTINCT s.id) AS sale_count
       FROM payments p
       JOIN sales s ON s.id = p.sale_id
-      WHERE p.method = 'cash'
-        AND s.status = 'completed'
+      WHERE s.status IN ('completed', 'partial_refund')
         AND s.sold_at >= ?
         AND (? IS NULL OR s.sold_at <= ?)
     ''', [shift.openedAt, shift.closedAt, shift.closedAt]);
 
     final cashSales = (salesRows.first['cash_sales'] as num?)?.toDouble() ?? 0;
+    final cardSales = (salesRows.first['card_sales'] as num?)?.toDouble() ?? 0;
+    final totalSales = (salesRows.first['total_sales'] as num?)?.toDouble() ?? 0;
+    final saleCount = (salesRows.first['sale_count'] as int?) ?? 0;
+    final otherSales = double.parse((totalSales - cashSales - cardSales).toStringAsFixed(2));
+
+    final refundRows = await _db.rawQuery('''
+      SELECT COALESCE(SUM(r.total), 0) AS refunds
+      FROM returns r
+      WHERE r.returned_at >= ?
+        AND (? IS NULL OR r.returned_at <= ?)
+    ''', [shift.openedAt, shift.closedAt, shift.closedAt]);
+    final refunds = (refundRows.first['refunds'] as num?)?.toDouble() ?? 0;
+
     final expected = shift.openingCash + cashSales + cashIn - cashOut;
 
     return ShiftSummary(
       shift: shift,
       cashSales: cashSales,
+      cardSales: cardSales,
+      otherSales: otherSales < 0 ? 0 : otherSales,
+      totalSales: totalSales,
+      saleCount: saleCount,
+      refunds: refunds,
       cashIn: cashIn,
       cashOut: cashOut,
       expectedCash: expected,
