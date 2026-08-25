@@ -1,0 +1,13 @@
+{
+  "codes": {
+    "SHOP-DEMO-0001": {
+      "customer": "Demo Shop",
+      "email": "demo@example.com",
+      "expires": "2027-12-31",
+      "issued": "2026-08-24",
+      "maxActivations": 1,
+      "activations": [],
+      "disabled": false
+    }
+  }
+}

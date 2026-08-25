@@ -203,10 +203,9 @@ try {
     if ($signed) {
         Write-Host "Signed: yes" -ForegroundColor Green
     } else {
-        Write-Host "Signed: no (set MAYLESOFT_SIGN_PFX — see tool\CODE_SIGNING.md)" -ForegroundColor DarkYellow
+        Write-Host "Signed: no (set MAYLESOFT_SIGN_PFX - see tool\CODE_SIGNING.md)" -ForegroundColor DarkYellow
     }
 }
 finally {
     Pop-Location
 }
-

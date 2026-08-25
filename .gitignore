@@ -89,6 +89,8 @@ credentials.json
 secrets.json
 google-services.json
 GoogleService-Info.plist
+tool/licensing/secrets/
+tool/licensing/out/
 
 # ── Local app / DB data (offline POS) ────────────────────────────────────────
 *.db

@@ -1,7 +1,11 @@
 ﻿{
-    "version":  "0.1.0",
-    "build":  1,
-    "releaseDate":  "2026-08-23",
-    "downloadUrl":  "https://retail.maylesoft.com/MayleSoftRetail-Setup-0.1.0.exe",
-    "notes":  "MayleSoft retail release 0.1.0"
+    "version":  "0.1.1",
+    "build":  2,
+    "releaseDate":  "2026-08-24",
+    "downloadUrl":  "https://retail.maylesoft.com/MayleSoftRetail-Setup-0.1.1.exe",
+    "fileName":  "MayleSoftRetail-Setup-0.1.1.exe",
+    "platform":  "windows",
+    "sha256":  "fa09d96466c86edc8b919fba84fe9a6a684f5bdfe74a8b00d82fd40834e2d2ee",
+    "signed":  false,
+    "notes":  "MayleSoft retail release 0.1.1"
 }

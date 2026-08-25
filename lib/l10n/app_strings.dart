@@ -293,6 +293,28 @@ class AppStrings {
   String get updateAvailableBody => get('updateAvailableBody');
   String get downloadUpdate => get('downloadUpdate');
   String get updateCheckFailed => get('updateCheckFailed');
+  String get activateLicenseTitle => get('activateLicenseTitle');
+  String get activateLicenseBody => get('activateLicenseBody');
+  String get activateLicenseBtn => get('activateLicenseBtn');
+  String get activateOnlineBtn => get('activateOnlineBtn');
+  String get activationCodeLabel => get('activationCodeLabel');
+  String get activationCodeHint => get('activationCodeHint');
+  String get machineIdAutoHint => get('machineIdAutoHint');
+  String get showFileActivate => get('showFileActivate');
+  String get hideFileActivate => get('hideFileActivate');
+  String get chooseLicenseFile => get('chooseLicenseFile');
+  String get orPasteLicense => get('orPasteLicense');
+  String get licenseActivated => get('licenseActivated');
+  String get machineIdLabel => get('machineIdLabel');
+  String get copyMachineId => get('copyMachineId');
+  String get machineIdCopied => get('machineIdCopied');
+  String get trialBanner => get('trialBanner');
+  String get licenseRequiredToSell => get('licenseRequiredToSell');
+  String get licenseStatusLabel => get('licenseStatusLabel');
+  String get licenseLicensed => get('licenseLicensed');
+  String get licenseLicensedUntil => get('licenseLicensedUntil');
+  String get licenseTrialDays => get('licenseTrialDays');
+  String get licenseBlocked => get('licenseBlocked');
   String get comingSoon => get('comingSoon');
   String get comingSoonBody => get('comingSoonBody');
   String get couldNotSave => get('couldNotSave');
@@ -719,6 +741,29 @@ class AppStrings {
     'updateAvailableBody': 'Version {version}+{build} is available.\n\n{notes}\n\nOpen the download page?',
     'downloadUpdate': 'Download',
     'updateCheckFailed': 'Could not check for updates: {error}',
+    'activateLicenseTitle': 'Activate MayleSoft retail',
+    'activateLicenseBody':
+        'Your {days}-day trial has ended, or you are activating a license. Enter the activation code from MayleSoft — this PC\'s Machine ID is sent automatically.',
+    'activateLicenseBtn': 'Activate pasted license',
+    'activateOnlineBtn': 'Activate with code',
+    'activationCodeLabel': 'Activation code',
+    'activationCodeHint': 'e.g. SHOP-9K2M-BLUE',
+    'machineIdAutoHint': 'Sent automatically when you activate online. Copy only if MayleSoft asks for it.',
+    'showFileActivate': 'Use license file / paste instead',
+    'hideFileActivate': 'Hide file / paste options',
+    'chooseLicenseFile': 'Choose license file (.lic)',
+    'orPasteLicense': 'Or paste license JSON',
+    'licenseActivated': 'License activated',
+    'machineIdLabel': 'Machine ID',
+    'copyMachineId': 'Copy Machine ID',
+    'machineIdCopied': 'Machine ID copied',
+    'trialBanner': 'Trial: {days} day(s) left — activate a license anytime',
+    'licenseRequiredToSell': 'A valid license is required to sell. Activate from Settings.',
+    'licenseStatusLabel': 'License',
+    'licenseLicensed': 'Licensed — {customer}',
+    'licenseLicensedUntil': 'Licensed — {customer} (until {date})',
+    'licenseTrialDays': 'Trial — {days} day(s) left',
+    'licenseBlocked': 'Blocked — activation required',
     'comingSoon': '{title} coming soon',
     'comingSoonBody': 'This section is reserved for upcoming MayleSoft retail configuration options.',
     'couldNotSave': 'Could not save: {error}',
@@ -1141,6 +1186,29 @@ class AppStrings {
       'updateAvailableBody': 'La version {version}+{build} est disponible.\n\n{notes}\n\nOuvrir la page de téléchargement ?',
       'downloadUpdate': 'Télécharger',
       'updateCheckFailed': 'Impossible de vérifier les mises à jour : {error}',
+      'activateLicenseTitle': 'Activer MayleSoft retail',
+      'activateLicenseBody':
+          'Votre essai de {days} jours est terminé, ou vous activez une licence. Saisissez le code MayleSoft — l\'ID machine de ce PC est envoyé automatiquement.',
+      'activateLicenseBtn': 'Activer la licence collée',
+      'activateOnlineBtn': 'Activer avec le code',
+      'activationCodeLabel': 'Code d\'activation',
+      'activationCodeHint': 'ex. SHOP-9K2M-BLUE',
+      'machineIdAutoHint': 'Envoyé automatiquement lors de l\'activation en ligne. Copiez seulement si MayleSoft le demande.',
+      'showFileActivate': 'Utiliser un fichier / coller à la place',
+      'hideFileActivate': 'Masquer fichier / collage',
+      'chooseLicenseFile': 'Choisir un fichier licence (.lic)',
+      'orPasteLicense': 'Ou coller le JSON de licence',
+      'licenseActivated': 'Licence activée',
+      'machineIdLabel': 'ID machine',
+      'copyMachineId': 'Copier l\'ID machine',
+      'machineIdCopied': 'ID machine copié',
+      'trialBanner': 'Essai : {days} j. restant(s) — activez une licence à tout moment',
+      'licenseRequiredToSell': 'Une licence valide est requise pour vendre. Activez dans Paramètres.',
+      'licenseStatusLabel': 'Licence',
+      'licenseLicensed': 'Licencié — {customer}',
+      'licenseLicensedUntil': 'Licencié — {customer} (jusqu\'au {date})',
+      'licenseTrialDays': 'Essai — {days} j. restant(s)',
+      'licenseBlocked': 'Bloqué — activation requise',
       'comingSoon': '{title} bientôt disponible',
       'comingSoonBody': 'Cette section est réservée aux options de configuration à venir.',
       'couldNotSave': 'Enregistrement impossible : {error}',
@@ -1555,6 +1623,29 @@ class AppStrings {
       'updateAvailableBody': 'الإصدار {version}+{build} متاح.\n\n{notes}\n\nفتح صفحة التنزيل؟',
       'downloadUpdate': 'تنزيل',
       'updateCheckFailed': 'تعذر التحقق من التحديثات: {error}',
+      'activateLicenseTitle': 'تفعيل MayleSoft retail',
+      'activateLicenseBody':
+          'انتهت فترة التجربة ({days} يوماً) أو تقوم بتفعيل ترخيص. أدخل رمز التفعيل من MayleSoft — يُرسل معرّف هذا الجهاز تلقائياً.',
+      'activateLicenseBtn': 'تفعيل الترخيص الملصق',
+      'activateOnlineBtn': 'تفعيل بالرمز',
+      'activationCodeLabel': 'رمز التفعيل',
+      'activationCodeHint': 'مثال SHOP-9K2M-BLUE',
+      'machineIdAutoHint': 'يُرسل تلقائياً عند التفعيل عبر الإنترنت. انسخه فقط إذا طلب MayleSoft ذلك.',
+      'showFileActivate': 'استخدام ملف / لصق بدلاً من ذلك',
+      'hideFileActivate': 'إخفاء خيارات الملف / اللصق',
+      'chooseLicenseFile': 'اختر ملف الترخيص (.lic)',
+      'orPasteLicense': 'أو الصق JSON الترخيص',
+      'licenseActivated': 'تم تفعيل الترخيص',
+      'machineIdLabel': 'معرّف الجهاز',
+      'copyMachineId': 'نسخ معرّف الجهاز',
+      'machineIdCopied': 'تم نسخ معرّف الجهاز',
+      'trialBanner': 'تجربة: متبقي {days} يوم — يمكنك التفعيل في أي وقت',
+      'licenseRequiredToSell': 'يلزم ترخيص صالح للبيع. فعّل من الإعدادات.',
+      'licenseStatusLabel': 'الترخيص',
+      'licenseLicensed': 'مرخّص — {customer}',
+      'licenseLicensedUntil': 'مرخّص — {customer} (حتى {date})',
+      'licenseTrialDays': 'تجربة — متبقي {days} يوم',
+      'licenseBlocked': 'محظور — يلزم التفعيل',
       'comingSoon': '{title} قريبًا',
       'comingSoonBody': 'هذا القسم مخصص لخيارات إعدادات MayleSoft retail القادمة.',
       'couldNotSave': 'تعذر الحفظ: {error}',
@@ -1969,6 +2060,29 @@ class AppStrings {
       'updateAvailableBody': 'Nooca {version}+{build} waa diyaar.\n\n{notes}\n\nFur bogga soo-dejinta?',
       'downloadUpdate': 'Soo deji',
       'updateCheckFailed': 'Lama hubin karo cusboonaysiinta: {error}',
+      'activateLicenseTitle': 'Fur MayleSoft retail',
+      'activateLicenseBody':
+          'Tijaabada {days} maalmood waa dhammaatay, ama waxaad furaysaa shati. Geli koodhka MayleSoft — Machine ID-ga kombuyuutarkaan si toos ah ayaa loo diraa.',
+      'activateLicenseBtn': 'Fur shatiga la dhajiyay',
+      'activateOnlineBtn': 'Ku fur koodhka',
+      'activationCodeLabel': 'Koodhka furitaanka',
+      'activationCodeHint': 'tusaale SHOP-9K2M-BLUE',
+      'machineIdAutoHint': 'Si toos ah ayaa loo diraa marka aad online ku furto. Koobi kaliya haddii MayleSoft waydiisto.',
+      'showFileActivate': 'Isticmaal fayl / dhaji beddelkeeda',
+      'hideFileActivate': 'Qari fayl / dhaji',
+      'chooseLicenseFile': 'Dooro faylka shatiga (.lic)',
+      'orPasteLicense': 'Ama dhaji JSON-ka shatiga',
+      'licenseActivated': 'Shatiga waa la furay',
+      'machineIdLabel': 'Machine ID',
+      'copyMachineId': 'Koobi Machine ID',
+      'machineIdCopied': 'Machine ID waa la koobiyey',
+      'trialBanner': 'Tijaabo: {days} maalmood ayaa haray — fur shati marka aad rabto',
+      'licenseRequiredToSell': 'Shati sax ah ayaa loo baahan yahay si aad u iibiso. Ka fur Settings.',
+      'licenseStatusLabel': 'Shatiga',
+      'licenseLicensed': 'Shati leh — {customer}',
+      'licenseLicensedUntil': 'Shati leh — {customer} (ilaa {date})',
+      'licenseTrialDays': 'Tijaabo — {days} maalmood ayaa haray',
+      'licenseBlocked': 'Xayiran — furitaanka ayaa loo baahan yahay',
       'comingSoon': '{title} dhawaan',
       'comingSoonBody': 'Qaybtan waxaa loogu talagalay doorashooyinka dejinta ee soo socda ee MayleSoft retail.',
       'couldNotSave': 'Lama kaydin karo: {error}',

@@ -9,6 +9,8 @@ import '../data/repositories/purchase_repository.dart';
 import '../data/repositories/sale_repository.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/staff_repository.dart';
+import '../licensing/license_document.dart';
+import '../licensing/license_service.dart';
 import '../models/cart_item.dart';
 import '../models/category.dart';
 import '../models/customer.dart';
@@ -18,6 +20,7 @@ import '../models/product.dart';
 import '../models/sale.dart';
 import '../models/settings_config.dart';
 import '../models/staff.dart';
+import '../services/license_activation_api.dart';
 import '../services/receipt_printer.dart';
 import '../l10n/app_strings.dart';
 
@@ -95,6 +98,10 @@ class RetailStore extends ChangeNotifier {
   List<PosDevice> posDevices = [];
   List<PrinterConfig> printers = [];
   NetworkSettings networkSettings = const NetworkSettings();
+  LicenseStatus licenseStatus = const LicenseStatus(kind: LicenseAccessKind.blocked);
+  String? machineId;
+
+  bool get canSell => licenseStatus.allowsUse;
 
   List<PaymentMethodConfig> get enabledPaymentMethods =>
       paymentMethods.where((m) => m.enabled).toList();
@@ -114,12 +121,46 @@ class RetailStore extends ChangeNotifier {
       await _loadSettings();
       await _loadConfigSettings();
       await _reloadAll();
+      await refreshLicense();
     } catch (e) {
       error = e.toString();
     } finally {
       loading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> refreshLicense() async {
+    licenseStatus = await LicenseService.instance.refresh();
+    machineId = LicenseService.instance.machineId;
+    notifyListeners();
+  }
+
+  Future<void> activateLicenseBytes(List<int> bytes) async {
+    licenseStatus = await LicenseService.instance.installLicenseBytes(bytes);
+    machineId = LicenseService.instance.machineId;
+    if (!licenseStatus.isLicensed) {
+      throw StateError(licenseStatus.message ?? 'License not accepted');
+    }
+    notifyListeners();
+  }
+
+  /// Online activation: posts code + this PC's Machine ID, installs returned .lic.
+  Future<void> activateWithCode(String code) async {
+    final mid = machineId ?? LicenseService.instance.machineId;
+    if (mid == null || mid.isEmpty) {
+      await refreshLicense();
+    }
+    final id = machineId ?? LicenseService.instance.machineId;
+    if (id == null || id.isEmpty) {
+      throw StateError('Machine ID is not available yet');
+    }
+    final bytes = await LicenseActivationApi.activate(
+      code: code,
+      machineId: id,
+      appVersion: AppInfo.versionLabel,
+    );
+    await activateLicenseBytes(bytes);
   }
 
   Future<void> _loadSettings() async {
@@ -482,6 +523,9 @@ class RetailStore extends ChangeNotifier {
     double? chargedTotal,
     int? customerId,
   }) async {
+    if (!canSell) {
+      throw StateError(licenseStatus.message ?? 'License required to sell');
+    }
     if (activeShift == null) {
       throw StateError('Open a shift before selling');
     }

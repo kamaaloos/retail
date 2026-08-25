@@ -7,6 +7,7 @@ import 'auth/role_permissions.dart';
 import 'data/database.dart';
 import 'l10n/app_strings.dart';
 import 'providers/retail_store.dart';
+import 'ui/activation_page.dart';
 import 'ui/change_pin_page.dart';
 import 'ui/login_page.dart';
 import 'ui/pages.dart';
@@ -90,6 +91,10 @@ class AppRoot extends StatelessWidget {
     final mustChangePin = context.select((RetailStore s) => s.requiresPinChange);
     if (mustChangePin) {
       return const ChangePinPage();
+    }
+    final licenseBlocked = context.select((RetailStore s) => s.licenseStatus.isBlocked);
+    if (licenseBlocked) {
+      return const ActivationPage();
     }
     return const AppShell();
   }
@@ -263,12 +268,51 @@ class _AppShellState extends State<AppShell> {
           Expanded(
             child: ColoredBox(
               color: AppColors.bg,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                child: KeyedSubtree(
-                  key: ValueKey(activePage.navIndex),
-                  child: _buildPage(activePage, role, strings),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (store.licenseStatus.isTrial)
+                    Material(
+                      color: AppColors.amber.withValues(alpha: 0.18),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Row(
+                          children: [
+                            Icon(Icons.timer_outlined, size: 18, color: AppColors.amber),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                strings.trialBanner.replaceAll(
+                                  '{days}',
+                                  '${store.licenseStatus.trialDaysLeft ?? 0}',
+                                ),
+                                style: TextStyle(color: AppColors.text, fontSize: 13),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const ActivationPage(allowSkipToShell: true),
+                                  ),
+                                );
+                              },
+                              child: Text(strings.activateLicenseBtn),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      child: KeyedSubtree(
+                        key: ValueKey(activePage.navIndex),
+                        child: _buildPage(activePage, role, strings),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

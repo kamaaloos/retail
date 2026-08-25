@@ -1,0 +1,15 @@
+{
+  "name": "maylesoft-license-server",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Online activation API for MayleSoft retail (Ed25519 .lic)",
+  "scripts": {
+    "start": "node server.js",
+    "create-code": "node create-code.js",
+    "verify-sign": "node verify-sign.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

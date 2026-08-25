@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 
 import '../app_info.dart';
 import '../l10n/app_strings.dart';
+import '../licensing/license_document.dart';
 import '../providers/retail_store.dart';
 import '../services/app_update.dart';
+import 'activation_page.dart';
 import 'theme.dart';
 import 'widgets.dart';
 import 'settings_tabs.dart';
@@ -420,6 +422,27 @@ class _SettingsPageState extends State<SettingsPage> {
                         _aboutRow(strings.version, AppInfo.versionLabel),
                         const SizedBox(height: 8),
                         _aboutRow(strings.systemName, store.systemName),
+                        const SizedBox(height: 8),
+                        _aboutRow(strings.licenseStatusLabel, _licenseStatusLabel(store, strings)),
+                        if (store.machineId != null) ...[
+                          const SizedBox(height: 8),
+                          _aboutRow(strings.machineIdLabel, store.machineId!),
+                        ],
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const ActivationPage(allowSkipToShell: true),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.vpn_key_outlined, size: 18),
+                            label: Text(strings.activateLicenseBtn),
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         SizedBox(
                           width: double.infinity,
@@ -491,9 +514,34 @@ class _SettingsPageState extends State<SettingsPage> {
       children: [
         Text(label, style: TextStyle(color: AppColors.muted)),
         const Spacer(),
-        Text(value, style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w600)),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w600),
+          ),
+        ),
       ],
     );
+  }
+
+  String _licenseStatusLabel(RetailStore store, AppStrings strings) {
+    final s = store.licenseStatus;
+    switch (s.kind) {
+      case LicenseAccessKind.licensed:
+        final name = s.document?.customer;
+        final exp = s.document?.expires;
+        if (exp != null && exp.isNotEmpty) {
+          return strings.licenseLicensedUntil
+              .replaceAll('{customer}', name ?? '')
+              .replaceAll('{date}', exp);
+        }
+        return strings.licenseLicensed.replaceAll('{customer}', name ?? '');
+      case LicenseAccessKind.trial:
+        return strings.licenseTrialDays.replaceAll('{days}', '${s.trialDaysLeft ?? 0}');
+      case LicenseAccessKind.blocked:
+        return strings.licenseBlocked;
+    }
   }
 
   Future<void> _checkForUpdates() async {

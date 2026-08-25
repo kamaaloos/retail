@@ -456,6 +456,10 @@ class _PosPageState extends State<PosPage> {
   Future<void> _charge() async {
     final store = context.read<RetailStore>();
     final t = AppStrings.of(store.language);
+    if (!store.canSell) {
+      await _snack(context, t.licenseRequiredToSell, error: true);
+      return;
+    }
     if (store.activeShift == null) {
       final open = await showDialog<bool>(
         context: context,
