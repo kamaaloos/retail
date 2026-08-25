@@ -2,10 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
   "trailingSlash": false,
-  "functions": {
-    "api/activate.js": {
-      "memory": 128,
-      "maxDuration": 10
+  "rewrites": [
+    {
+      "source": "/api/activate",
+      "destination": "https://retail-production-f318.up.railway.app/api/activate"
     }
-  }
+  ]
 }
